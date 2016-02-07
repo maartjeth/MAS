@@ -45,7 +45,8 @@ to setup-patches
   clear-patches
 
   ; for every cell on the grid it sets the colour to grey (= dirt) or it stays black (= no dirt)
-  repeat 9 [ask patch random-pxcor random-pycor [set pcolor grey]]
+  ; NOTE: this is not correct yet --> doesn't check whether patch has already been changed
+  repeat dirt_pct [ask patch random-pxcor random-pycor [set pcolor grey]]
 end
 
 
@@ -74,10 +75,57 @@ end
 to assignment_one
   ; here assignment 2.1 is implemented, the specific solution
   ask turtles [if pxcor = 0 and pycor = 0 [
-     forward 1
+      clean-dirt
+      forward 1
   ]]
 
+  ask turtles [if pxcor = 0 and pycor = 1 [
+      clean-dirt
+      forward 1
+  ]]
 
+  ask turtles [if pxcor = 0 and pycor = 2 [
+      clean-dirt
+      setxy 1 2
+      set heading 180
+  ]]
+
+  ask turtles [if pxcor = 1 and pycor = 2 [
+      clean-dirt
+      forward 1
+  ]]
+
+  ask turtles [if pxcor = 1 and pycor = 1 [
+      clean-dirt
+      forward 1
+  ]]
+
+  ask turtles [if pxcor = 1 and pycor = 0 [
+      clean-dirt
+      setxy 2 0
+      set heading 0
+  ]]
+
+  ask turtles [if pxcor = 2 and pycor = 0 [
+      clean-dirt
+      forward 1
+  ]]
+
+  ask turtles [if pxcor = 2 and pycor = 1 [
+      clean-dirt
+      forward 1
+  ]]
+
+  ask turtles [if pxcor = 2 and pycor = 2 [
+      clean-dirt
+  ]]
+
+end
+
+to clean-dirt
+   if pcolor = grey [
+      set pcolor black
+   ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -101,8 +149,8 @@ GRAPHICS-WINDOW
 2
 0
 2
-1
-1
+0
+0
 1
 ticks
 30.0
@@ -161,7 +209,7 @@ dirt_pct
 dirt_pct
 0
 100
-50
+8
 1
 1
 NIL
