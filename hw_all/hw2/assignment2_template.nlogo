@@ -69,7 +69,8 @@ end
 to execute-actions
   ; Here you should put the code related to the actions performed by your smart vacuum cleaner: moving and cleaning.
   ; You can separate these actions into two different methods if you want, but these methods should only be called from here!
-  assignment_one
+  ;assignment_one
+  assignment_two
 end
 
 to assignment_one
@@ -119,7 +120,44 @@ to assignment_one
   ask turtles [if pxcor = 2 and pycor = 2 [
       clean-dirt
   ]]
+end
 
+to assignment_two
+  ask turtles [
+      ;while [distancexy max-pxcor max-pycor != 1] [
+      ; moving upwards
+      if heading = 0 [
+         while [pycor != max-pycor] [
+            ;print distancexy max-pxcor max-pycor
+            print turtles-here
+            clean-dirt
+            forward 1
+         ]
+         clean-dirt
+         move-right
+      ]
+      ; moving downwards
+      if heading = 180 [
+         while [pycor != 0] [
+            ;print distancexy max-pxcor max-pycor
+            print turtles-here
+            clean-dirt
+            forward 1
+         ]
+         clean-dirt
+         move-left
+      ]
+  ]
+end
+
+to move-right
+   setxy pxcor + 1 pycor
+   set heading 180
+end
+
+to move-left
+   setxy pxcor + 1 pycor
+   set heading 0
 end
 
 to clean-dirt
@@ -131,8 +169,8 @@ end
 GRAPHICS-WINDOW
 210
 10
-455
-209
+668
+545
 -1
 -1
 56.0
@@ -146,9 +184,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-2
+7
 0
-2
+8
 0
 0
 1
