@@ -22,6 +22,7 @@ globals []
 
 ; --- Setup ---
 to setup
+  clear-all
   setup-patches
   setup-turtles
   setup-ticks
@@ -32,6 +33,7 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 2, this only involves the execution of actions (and advancing the tick counter).
+
   execute-actions
   tick
 end
@@ -40,18 +42,25 @@ end
 ; --- Setup patches ---
 to setup-patches
   ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
+  clear-patches
+
+  ; for every cell on the grid it sets the colour to grey (= dirt) or it stays black (= no dirt)
+  repeat 9 [ask patch random-pxcor random-pycor [set pcolor grey]]
 end
 
 
 ; --- Setup turtles ---
 to setup-turtles
   ; In this method you may create the agents (in this case, there is only 1 agent).
+  create-turtles 1
+  ask turtles [set heading 0]
 end
 
 
 ; --- Setup ticks ---
 to setup-ticks
   ; In this method you may start the tick counter.
+  reset-ticks
 end
 
 
@@ -59,6 +68,16 @@ end
 to execute-actions
   ; Here you should put the code related to the actions performed by your smart vacuum cleaner: moving and cleaning.
   ; You can separate these actions into two different methods if you want, but these methods should only be called from here!
+  assignment_one
+end
+
+to assignment_one
+  ; here assignment 2.1 is implemented, the specific solution
+  ask turtles [if pxcor = 0 and pycor = 0 [
+     forward 1
+  ]]
+
+
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -110,7 +129,7 @@ BUTTON
 10
 143
 43
-go
+NIL
 go
 T
 1
@@ -147,6 +166,23 @@ dirt_pct
 1
 NIL
 HORIZONTAL
+
+BUTTON
+35
+221
+98
+254
+NIL
+NIL
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
