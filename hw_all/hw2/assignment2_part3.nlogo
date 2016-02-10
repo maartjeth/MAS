@@ -17,7 +17,7 @@
 
 ; --- Global variables ---
 ; This template does not contain any global variables, but if you need them you can add them here.
-globals [x_end y_end dirt_amount finish]
+globals [x_end y_end dirt_amount obst_amount finish]
 patches-own [ variableA last_tick ]
 turtles-own [ x y ]
 
@@ -28,6 +28,7 @@ to setup
   set x_end max-pxcor
   set y_end max-pycor
   set dirt_amount floor(count patches * dirt_pct / 100)
+  set obst_amount floor(count patches * obstacle_pct / 100)
   set finish false
   setup-patches
   setup-turtles
@@ -54,13 +55,14 @@ to setup-patches
   ask patches [set pcolor white] ;to present all the clean patches as white patches
   ; use dirt_pct as the percentage of available dirt
   ask n-of dirt_amount patches [ set pcolor grey ]
+  ask n-of obst_amount patches [ set pcolor black ]
 end
 
 
 ; --- Setup turtles ---
 to setup-turtles
   ; In this method you may create the agents (in this case, there is only 1 agent).
-  create-turtles 1
+  create-turtles 1 [setxy min-pxcor min-pycor] ;[xx added]
   ask turtles [set heading 0] ; heading 0 is north
   ask turtles [set color blue] ;giving the turtle a blue color
 end
@@ -78,23 +80,90 @@ to execute-actions
   ; Here you should put the code related to the actions performed by your smart vacuum cleaner: moving and cleaning.
   ; You can separate these actions into two different methods if you want, but these methods should only be called from here!
   ; assignment_one
-  assignment_two
+  assignment_three
 
 end
 
-to move-right
-   setxy pxcor + 1 pycor
-   set heading 180
-   ; heading 180 is south
+to assignment_three
+  ask turtles [
+    ifelse pycor != max-pycor and [pcolor] of patch-ahead 1 != black [
+      clean-dirt
+      move-free
+    ]
+    [ move-obst ]
+      ;ifelse [pcolor] of patch-ahead 1 != black [
+      ;  move-free
+      ;]
+      ;[ move-obst ]
 
+    if pycor = max-pycor [
+      clean-dirt
+      move-lane
+    ]
+  ]
 end
 
-to move-left
-   setxy pxcor + 1 pycor
-   set heading 0
-   ; heading 0 is north
+; choose move when you've no obstacle ahead of you
+to move-free
+  ifelse random 100 <= 80 [
+    forward 1
+  ]
+  [ move-lane ]
 end
 
+to move-obst
+  move-lane
+end
+
+; if you're at the end of the grid, move lane (assignment 3 tells you to go left or right randomly)
+to move-lane
+  ifelse random 100 <= 50 [
+    ifelse heading = 0 [
+      move-left-north
+    ]
+    [ move-left-south ]
+  ]
+  [ ifelse heading = 0 [
+       move-right-north ]
+    [ move-right-south ]
+  ]
+end
+
+; moving right depends on the way you're facing on the grid
+to move-right-north
+  ifelse pxcor + 1 < max-pxcor [ ; check whether you're not at a wall
+    setxy pxcor + 1 pycor
+    set heading 180
+  ]
+  [ move-left-north ] ; move left if you have a wall to your right
+end
+
+; moving left depends on the direction you're facing
+to move-left-north
+  ifelse pxcor - 1 > 0 [ ; check whether you're not at a wall
+    setxy pxcor - 1 pycor
+    set heading 180
+  ]
+  [ move-right-north ] ; move right you have a wall to your left
+end
+
+to move-right-south
+  ifelse pxcor - 1 > 0 [
+    setxy pxcor - 1 pycor
+    set heading 0
+  ]
+  [ move-left-south ]
+end
+
+to move-left-south
+  ifelse pxcor + 1 < max-pxcor [
+    setxy pxcor + 1 pycor
+    set heading 180
+  ]
+  [ move-right-south ]
+end
+
+; check whether you're on a dirty patch, if so, clean
 to clean-dirt
   if pcolor = grey [
     set pcolor white
@@ -103,94 +172,27 @@ to clean-dirt
 end
 
 
-to assignment_two
-  ask turtles [
-    if dirt_amount != 0 [
-      if heading = 0 [
-        if pycor != max-pycor [
-          clean-dirt
-          forward 1
-        ]
-        if pycor = max-pycor [
-          clean-dirt
-          move-right
-        ]
-      ]
-      if heading = 180 [
-        if pycor != 0 [
-          clean-dirt
-          forward 1
-        ]
-        if pycor = 0 [
-          clean-dirt
-          move-left
-        ]
-      ]
-    ]
-    if dirt_amount = 0 [
-      set finish True
-    ]
-   ]
-
-end
 
 
+; randomly choose to move to the left or to the right
+;to turn-left-or-right
+;  ; idea: randomly turn around, check whether obstacle ahead --> move or other direction
 
-
-to end_simulation
-  if (distancexy 0 0) > 0
-  [ set color green]
-end
-
-;to check_end
-;  set x( [xcor] of turtle 0)
-;  set y( [ycor] of turtle 0)
-;  if [ x = x_end and y = y_end] [
-;    set last_tick = 1
-;  ]
-;  print variableA
+;  run one-of (list task move-left
+;                   task move-right)
 ;end
 
+  ;if [pcolor] of patch +1 +0 = black [
+  ;  print " black"
+  ;]
+;end
 
-; ---------------------------------------- BACKUP ------------------------------------------- ;
-
-to assignment_two_back
-  ask turtles [
-      ;while [distancexy max-pxcor max-pycor != 1] [
-      ; moving upwards
-      if heading = 0 [
-         while [pycor != max-pycor] [
-            ;print distancexy max-pxcor max-pycor
-            ;print turtles-here
-            clean-dirt
-            forward 1
-         ]
-         clean-dirt
-         move-right
-         ;check_end
-
-      ]
-      ; moving downwards
-      if heading = 180 [
-         while [pycor != 0] [
-            ;print distancexy max-pxcor max-pycor
-            ;print turtles-here
-            clean-dirt
-            forward 1
-         ]
-         clean-dirt
-         move-left
-         ;check_end
-
-      ]
-  ]
-end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+357
 10
-668
-545
+871
+601
 -1
 -1
 56.0
@@ -204,11 +206,11 @@ GRAPHICS-WINDOW
 1
 1
 0
-7
-0
 8
 0
-0
+9
+1
+1
 1
 ticks
 30.0
@@ -235,7 +237,7 @@ BUTTON
 10
 143
 43
-NIL
+go
 go
 T
 1
@@ -267,34 +269,32 @@ dirt_pct
 dirt_pct
 0
 100
-13
+22
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+17
+169
+189
+202
+obstacle_pct
+obstacle_pct
+0
+100
+50
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-35
-221
-98
-254
-NIL
-NIL
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-930
-178
-993
-211
+31
+250
+94
+283
 NIL
 go
 NIL
