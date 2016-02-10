@@ -61,10 +61,11 @@ end
 
 ; --- Setup turtles ---
 to setup-turtles
-  ; In this method you may create the agents (in this case, there is only 1 agent).
-  create-turtles 1 [setxy min-pxcor min-pycor] ;[xx added]
+  ; In this method you may create the agents (in this case, there is only 1 agent)
+  create-turtles 1 ;[setxy min-pxcor min-pycor] ;[xx added]
   ask turtles [set heading 0] ; heading 0 is north
   ask turtles [set color blue] ;giving the turtle a blue color
+  ask turtles [ move-to one-of patches with [pcolor != black] ]
 end
 
 
@@ -90,77 +91,13 @@ to assignment_three
       clean-dirt
       move-free
     ]
-    [ move-obst ]
-      ;ifelse [pcolor] of patch-ahead 1 != black [
-      ;  move-free
-      ;]
-      ;[ move-obst ]
-
+    [ clean-dirt
+      turn-around-and-move ]
     if pycor = max-pycor [
       clean-dirt
-      move-lane
+      turn-around-and-move
     ]
   ]
-end
-
-; choose move when you've no obstacle ahead of you
-to move-free
-  ifelse random 100 <= 80 [
-    forward 1
-  ]
-  [ move-lane ]
-end
-
-to move-obst
-  move-lane
-end
-
-; if you're at the end of the grid, move lane (assignment 3 tells you to go left or right randomly)
-to move-lane
-  ifelse random 100 <= 50 [
-    ifelse heading = 0 [
-      move-left-north
-    ]
-    [ move-left-south ]
-  ]
-  [ ifelse heading = 0 [
-       move-right-north ]
-    [ move-right-south ]
-  ]
-end
-
-; moving right depends on the way you're facing on the grid
-to move-right-north
-  ifelse pxcor + 1 < max-pxcor [ ; check whether you're not at a wall
-    setxy pxcor + 1 pycor
-    set heading 180
-  ]
-  [ move-left-north ] ; move left if you have a wall to your right
-end
-
-; moving left depends on the direction you're facing
-to move-left-north
-  ifelse pxcor - 1 > 0 [ ; check whether you're not at a wall
-    setxy pxcor - 1 pycor
-    set heading 180
-  ]
-  [ move-right-north ] ; move right you have a wall to your left
-end
-
-to move-right-south
-  ifelse pxcor - 1 > 0 [
-    setxy pxcor - 1 pycor
-    set heading 0
-  ]
-  [ move-left-south ]
-end
-
-to move-left-south
-  ifelse pxcor + 1 < max-pxcor [
-    setxy pxcor + 1 pycor
-    set heading 180
-  ]
-  [ move-right-south ]
 end
 
 ; check whether you're on a dirty patch, if so, clean
@@ -171,22 +108,39 @@ to clean-dirt
   ]
 end
 
+; choose move when you've no obstacle ahead of you --> most of the times straight ahead, sometimes a random turn left or right
+to move-free
+  ifelse random 100 <= 80 [
+    forward 1
+  ]
+  [ turn-around-and-move ]
+end
 
+; randomly decide in which direction you want to move (left or right)
+to turn-around-and-move
+  ifelse random 100 <= 50 [
+    move-left
+  ]
+  [ move-right ]
+end
 
+; make left turn of 90 decrees and move in that direction if no obstacles ahead
+to move-left
+  lt 90
+  ifelse [pcolor] of patch-ahead 1 != black [
+    forward 1
+  ]
+  [ move-left ]; recursively call until you're not stuck anymore --> can't get into a loop as otherwise you'd not been able to get into that position
+end
 
-; randomly choose to move to the left or to the right
-;to turn-left-or-right
-;  ; idea: randomly turn around, check whether obstacle ahead --> move or other direction
-
-;  run one-of (list task move-left
-;                   task move-right)
-;end
-
-  ;if [pcolor] of patch +1 +0 = black [
-  ;  print " black"
-  ;]
-;end
-
+; make right turn of 90 degrees and move in that direction if no obstacle ahead
+to move-right
+  rt 90
+  ifelse [pcolor] of patch-ahead 1 != black [
+    forward 1
+  ]
+  [ move-right ]; same as in move-left
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
 357
