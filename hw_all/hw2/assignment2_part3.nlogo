@@ -87,7 +87,7 @@ end
 
 to assignment_three
   ask turtles [
-    ifelse pycor != max-pycor and [pcolor] of patch-ahead 1 != black [
+    ifelse [pcolor] of patch-ahead 1 != black [
       clean-dirt
       move-free
     ]
@@ -110,7 +110,10 @@ end
 
 ; choose move when you've no obstacle ahead of you --> most of the times straight ahead, sometimes a random turn left or right
 to move-free
-  ifelse random 100 <= 80 [
+  ifelse random 100 <= 80 [ ;and (pycor != max-pycor and heading = 0)
+                          ;and (pycor != min-pycor and heading = 180)
+                          ;and (pxcor != max-pxcor and heading = 90)
+                          ;and (pxcor != min-pxcor and heading = 270)[
     forward 1
   ]
   [ turn-around-and-move ]
@@ -127,7 +130,10 @@ end
 ; make left turn of 90 decrees and move in that direction if no obstacles ahead
 to move-left
   lt 90
-  ifelse [pcolor] of patch-ahead 1 != black [
+  ifelse [pcolor] of patch-ahead 1 != black [ ;and (pycor != max-pycor and heading = 0)
+                          ;and (pycor != min-pycor and heading = 180)
+                          ;and (pxcor != max-pxcor and heading = 90)
+                          ;and (pxcor != min-pxcor and heading = 270)[
     forward 1
   ]
   [ move-left ]; recursively call until you're not stuck anymore --> can't get into a loop as otherwise you'd not been able to get into that position
@@ -136,7 +142,10 @@ end
 ; make right turn of 90 degrees and move in that direction if no obstacle ahead
 to move-right
   rt 90
-  ifelse [pcolor] of patch-ahead 1 != black [
+  ifelse [pcolor] of patch-ahead 1 != black [ ;and (pycor != max-pycor and heading = 0)
+                          ;and (pycor != min-pycor and heading = 180)
+                          ;and (pxcor != max-pxcor and heading = 90)
+                          ;and (pxcor != min-pxcor and heading = 270)[
     forward 1
   ]
   [ move-right ]; same as in move-left
