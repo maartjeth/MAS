@@ -18,7 +18,7 @@
 ; --- Global variables ---
 ; This template does not contain any global variables, but if you need them you can add them here.
 globals [x_end y_end dirt_amount obst_amount finish]
-patches-own [ variableA last_tick ]
+patches-own [ last_tick ]
 turtles-own [ x y ]
 
 
@@ -42,7 +42,7 @@ to go
   ; For Assignment 2, this only involves the execution of actions (and advancing the tick counter).
   execute-actions
   tick
-  if finish = True [
+  if finish = true [
     stop
   ]
 end
@@ -65,6 +65,7 @@ to setup-turtles
   create-turtles 1 ;[setxy min-pxcor min-pycor] ;[xx added]
   ask turtles [set heading 0] ; heading 0 is north
   ask turtles [set color blue] ;giving the turtle a blue color
+  ; to make sure that the turtle does not start on an obstacle
   ask turtles [ move-to one-of patches with [pcolor != black] ]
 end
 
@@ -105,16 +106,35 @@ to clean-dirt
   if pcolor = grey [
     set pcolor white
     set dirt_amount dirt_amount - 1
+    print dirt_amount
+    if dirt_amount = 0 [
+      set finish true
+    ]
   ]
 end
 
-; choose move when you've no obstacle ahead of you --> most of the times straight ahead, sometimes a random turn left or right
+; choose move when you've no obstacle ahead of you and no wall --> most of the times straight ahead, sometimes a random turn left or right
 to move-free
-  ifelse random 100 <= 80 [ ;and (pycor != max-pycor and heading = 0)
-                          ;and (pycor != min-pycor and heading = 180)
-                          ;and (pxcor != max-pxcor and heading = 90)
-                          ;and (pxcor != min-pxcor and heading = 270)[
-    forward 1
+  ifelse random 100 <= 80 [
+    print heading
+    print pycor
+    print pxcor
+    if pycor != max-pycor and heading = 0 [
+      forward 1
+      stop
+    ]
+    if pycor != min-pycor and heading = 180 [
+      forward 1
+      stop
+    ]
+    if pxcor != max-pxcor and heading = 90 [
+      forward 1
+      stop
+    ]
+    if pxcor != min-pxcor and heading = 270 [
+      forward 1
+      stop
+    ]
   ]
   [ turn-around-and-move ]
 end
@@ -127,26 +147,54 @@ to turn-around-and-move
   [ move-right ]
 end
 
-; make left turn of 90 decrees and move in that direction if no obstacles ahead
+; make left turn of 90 decrees and move in that direction if no obstacles ahead and there is no wall
+; heading 0 = north
+; heading 90 = east
+; heading 180 = south
+; heading 270 = west
 to move-left
   lt 90
-  ifelse [pcolor] of patch-ahead 1 != black [ ;and (pycor != max-pycor and heading = 0)
-                          ;and (pycor != min-pycor and heading = 180)
-                          ;and (pxcor != max-pxcor and heading = 90)
-                          ;and (pxcor != min-pxcor and heading = 270)[
-    forward 1
+  ifelse [pcolor] of patch-ahead 1 != black [
+   if pycor != max-pycor and heading = 0 [
+      forward 1
+      stop
+    ]
+    if pycor != min-pycor and heading = 180 [
+      forward 1
+      stop
+    ]
+    if pxcor != max-pxcor and heading = 90 [
+      forward 1
+      stop
+    ]
+    if pxcor != min-pxcor and heading = 270 [
+      forward 1
+      stop
+    ]
   ]
   [ move-left ]; recursively call until you're not stuck anymore --> can't get into a loop as otherwise you'd not been able to get into that position
 end
 
-; make right turn of 90 degrees and move in that direction if no obstacle ahead
+; make right turn of 90 degrees and move in that direction if no obstacle ahead and there is no wall
 to move-right
   rt 90
-  ifelse [pcolor] of patch-ahead 1 != black [ ;and (pycor != max-pycor and heading = 0)
-                          ;and (pycor != min-pycor and heading = 180)
-                          ;and (pxcor != max-pxcor and heading = 90)
-                          ;and (pxcor != min-pxcor and heading = 270)[
-    forward 1
+  ifelse [pcolor] of patch-ahead 1 != black [
+    if pycor != max-pycor and heading = 0 [
+      forward 1
+      stop
+    ]
+    if pycor != min-pycor and heading = 180 [
+      forward 1
+      stop
+    ]
+    if pxcor != max-pxcor and heading = 90 [
+      forward 1
+      stop
+    ]
+    if pxcor != min-pxcor and heading = 270 [
+      forward 1
+      stop
+    ]
   ]
   [ move-right ]; same as in move-left
 end
@@ -232,7 +280,7 @@ dirt_pct
 dirt_pct
 0
 100
-22
+6
 1
 1
 NIL
@@ -247,7 +295,7 @@ obstacle_pct
 obstacle_pct
 0
 100
-50
+65
 1
 1
 NIL
