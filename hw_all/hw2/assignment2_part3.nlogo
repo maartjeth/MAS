@@ -1,3 +1,9 @@
+; Assignment 2, part 3
+; Contributors:
+; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
+; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
+; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
+
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
 ; Lab assistants: D. Formolo & L. Medeiros
@@ -28,6 +34,8 @@ to setup
   set x_end max-pxcor
   set y_end max-pycor
   set dirt_amount floor(count patches * dirt_pct / 100)
+  print "dirt amount setting"
+  print dirt_amount
   set obst_amount floor(count patches * obstacle_pct / 100)
   set finish false
   setup-patches
@@ -54,8 +62,8 @@ to setup-patches
   clear-patches
   ask patches [set pcolor white] ;to present all the clean patches as white patches
   ; use dirt_pct as the percentage of available dirt
-  ask n-of dirt_amount patches [ set pcolor grey ]
-  ask n-of obst_amount patches [ set pcolor black ]
+  ask n-of dirt_amount patches with [pcolor = white] [ set pcolor grey ]
+  ask n-of obst_amount patches with [pcolor = white] [ set pcolor black ]
 end
 
 
@@ -82,21 +90,19 @@ to execute-actions
   ; Here you should put the code related to the actions performed by your smart vacuum cleaner: moving and cleaning.
   ; You can separate these actions into two different methods if you want, but these methods should only be called from here!
   ; assignment_one
-  assignment_three
-
-end
-
-to assignment_three
   ask turtles [
-    ifelse [pcolor] of patch-ahead 1 != black [
-      clean-dirt
-      move-free
-    ]
-    [ clean-dirt
-      turn-around-and-move ]
-    if pycor = max-pycor [
-      clean-dirt
-      turn-around-and-move
+    if dirt_amount != 0 [
+      print dirt_amount
+      ifelse [pcolor] of patch-ahead 1 != black [
+        clean-dirt
+        move-free
+      ]
+      [ clean-dirt
+        turn-around-and-move ]
+      if pycor = max-pycor [
+        clean-dirt
+        turn-around-and-move
+      ]
     ]
   ]
 end
@@ -106,7 +112,7 @@ to clean-dirt
   if pcolor = grey [
     set pcolor white
     set dirt_amount dirt_amount - 1
-    print dirt_amount
+    print "cleaned dirt"
     if dirt_amount = 0 [
       set finish true
     ]
@@ -116,9 +122,9 @@ end
 ; choose move when you've no obstacle ahead of you and no wall --> most of the times straight ahead, sometimes a random turn left or right
 to move-free
   ifelse random 100 <= 80 [
-    print heading
-    print pycor
-    print pxcor
+    ;print heading
+    ;print pycor
+    ;print pxcor
     if pycor != max-pycor and heading = 0 [
       forward 1
       stop
@@ -202,8 +208,8 @@ end
 GRAPHICS-WINDOW
 357
 10
-871
-601
+927
+545
 -1
 -1
 56.0
@@ -217,9 +223,9 @@ GRAPHICS-WINDOW
 1
 1
 0
-8
-0
 9
+0
+8
 1
 1
 1
@@ -295,7 +301,7 @@ obstacle_pct
 obstacle_pct
 0
 100
-65
+10
 1
 1
 NIL

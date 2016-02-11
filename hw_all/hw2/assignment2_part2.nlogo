@@ -1,8 +1,8 @@
-; Assignment 2 - Part 2
+; Assignment 2, part 3
 ; Contributors:
-; Romy Blankendaal ()
-; Maartje ter Hoeve (maartje.terhoeve@student.uva.nl, 10190015)
-; Suzanne Tolmeijer ()
+; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
+; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
+; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
 
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
@@ -148,7 +148,6 @@ to move-left
    setxy pxcor + 1 pycor
    set heading 0
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
