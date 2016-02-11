@@ -1,5 +1,5 @@
 ; Assignment 2, part 3
-; Contributors:
+; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
 ; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
@@ -24,8 +24,6 @@
 ; --- Global variables ---
 ; This template does not contain any global variables, but if you need them you can add them here.
 globals [x_end y_end dirt_amount obst_amount finish]
-patches-own [ last_tick ]
-turtles-own [ x y ]
 
 
 ; --- Setup ---
@@ -34,8 +32,8 @@ to setup
   set x_end max-pxcor
   set y_end max-pycor
   set dirt_amount floor(count patches * dirt_pct / 100)
-  print "dirt amount setting"
-  print dirt_amount
+  ;print "dirt amount setting"
+  ;print dirt_amount
   set obst_amount floor(count patches * obstacle_pct / 100)
   set finish false
   setup-patches
@@ -267,10 +265,10 @@ NIL
 0
 
 MONITOR
-7
-103
-177
-148
+6
+146
+176
+191
 dirt
 count patches with [pcolor = grey]
 17
@@ -286,32 +284,32 @@ dirt_pct
 dirt_pct
 0
 100
-6
+45
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-17
-169
-189
-202
+7
+102
+179
+135
 obstacle_pct
 obstacle_pct
 0
 100
-10
+15
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-31
-250
-94
-283
+113
+198
+176
+231
 NIL
 go
 NIL
