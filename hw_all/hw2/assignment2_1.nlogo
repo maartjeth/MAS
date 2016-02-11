@@ -17,19 +17,13 @@
 
 ; --- Global variables ---
 ; This template does not contain any global variables, but if you need them you can add them here.
-globals [x_end y_end dirt_amount obst_amount finish]
-patches-own [ last_tick ]
-turtles-own [ x y ]
+globals []
+
 
 
 ; --- Setup ---
 to setup
   clear-all
-  set x_end max-pxcor
-  set y_end max-pycor
-  set dirt_amount floor(count patches * dirt_pct / 100)
-  set obst_amount floor(count patches * obstacle_pct / 100)
-  set finish false
   setup-patches
   setup-turtles
   setup-ticks
@@ -42,9 +36,8 @@ to go
   ; For Assignment 2, this only involves the execution of actions (and advancing the tick counter).
   execute-actions
   tick
-  if finish = true [
-    stop
-  ]
+  if any? turtles with [color = red] [stop]
+
 end
 
 
@@ -54,19 +47,17 @@ to setup-patches
   clear-patches
   ask patches [set pcolor white] ;to present all the clean patches as white patches
   ; use dirt_pct as the percentage of available dirt
-  ask n-of dirt_amount patches [ set pcolor grey ]
-  ask n-of obst_amount patches [ set pcolor black ]
+  ask n-of (count patches * dirt_pct / 100) patches [ set pcolor grey ]
+
 end
 
 
 ; --- Setup turtles ---
 to setup-turtles
-  ; In this method you may create the agents (in this case, there is only 1 agent)
-  create-turtles 1 ;[setxy min-pxcor min-pycor] ;[xx added]
+  ; In this method you may create the agents (in this case, there is only 1 agent).
+  create-turtles 1
   ask turtles [set heading 0] ; heading 0 is north
   ask turtles [set color blue] ;giving the turtle a blue color
-  ; to make sure that the turtle does not start on an obstacle
-  ask turtles [ move-to one-of patches with [pcolor != black] ]
 end
 
 
@@ -81,132 +72,99 @@ end
 to execute-actions
   ; Here you should put the code related to the actions performed by your smart vacuum cleaner: moving and cleaning.
   ; You can separate these actions into two different methods if you want, but these methods should only be called from here!
-  ; assignment_one
-  assignment_three
-
-end
-
-to assignment_three
   ask turtles [
-    ifelse [pcolor] of patch-ahead 1 != black [
+    if pxcor = 0 and pycor = 0 [
       clean-dirt
-      move-free
+      forward 1
+      stop
     ]
-    [ clean-dirt
-      turn-around-and-move ]
-    if pycor = max-pycor [
+
+    if pxcor = 0 and pycor = 1 [
       clean-dirt
-      turn-around-and-move
+      forward 1
+      stop
     ]
+
+    if pxcor = 0 and pycor = 2 [
+      clean-dirt
+      setxy 1 2
+      set heading 180
+      stop
+    ]
+
+    if pxcor = 1 and pycor = 2 [
+      clean-dirt
+      forward 1
+      stop
+    ]
+
+    if pxcor = 1 and pycor = 1 [
+      clean-dirt
+      forward 1
+      stop
+
+    ]
+    if pxcor = 1 and pycor = 0 [
+      clean-dirt
+      setxy 2 0
+      set heading 0
+      stop
+    ]
+
+    if pxcor = 2 and pycor = 0 [
+      clean-dirt
+      forward 1
+      stop
+   ]
+
+   if pxcor = 2 and pycor = 1 [
+      clean-dirt
+      forward 1
+      stop
   ]
+
+  if pxcor = 2 and pycor = 2 [
+      clean-dirt
+      ask self [set color red ]
+      stop
+
+  ]
+]
 end
 
-; check whether you're on a dirty patch, if so, clean
+to move-right
+   setxy pxcor + 1 pycor
+   set heading 180
+   ; heading 180 is south
+
+end
+
+to move-left
+   setxy pxcor + 1 pycor
+   set heading 0
+   ; heading 0 is north
+end
+
 to clean-dirt
   if pcolor = grey [
     set pcolor white
-    set dirt_amount dirt_amount - 1
-    print dirt_amount
-    if dirt_amount = 0 [
-      set finish true
-    ]
   ]
 end
 
-; choose move when you've no obstacle ahead of you and no wall --> most of the times straight ahead, sometimes a random turn left or right
-to move-free
-  ifelse random 100 <= 80 [
-    print heading
-    print pycor
-    print pxcor
-    if pycor != max-pycor and heading = 0 [
-      forward 1
-      stop
-    ]
-    if pycor != min-pycor and heading = 180 [
-      forward 1
-      stop
-    ]
-    if pxcor != max-pxcor and heading = 90 [
-      forward 1
-      stop
-    ]
-    if pxcor != min-pxcor and heading = 270 [
-      forward 1
-      stop
-    ]
-  ]
-  [ turn-around-and-move ]
-end
 
-; randomly decide in which direction you want to move (left or right)
-to turn-around-and-move
-  ifelse random 100 <= 50 [
-    move-left
-  ]
-  [ move-right ]
-end
-
-; make left turn of 90 decrees and move in that direction if no obstacles ahead and there is no wall
-; heading 0 = north
-; heading 90 = east
-; heading 180 = south
-; heading 270 = west
-to move-left
-  lt 90
-  ifelse [pcolor] of patch-ahead 1 != black [
-   if pycor != max-pycor and heading = 0 [
-      forward 1
-      stop
-    ]
-    if pycor != min-pycor and heading = 180 [
-      forward 1
-      stop
-    ]
-    if pxcor != max-pxcor and heading = 90 [
-      forward 1
-      stop
-    ]
-    if pxcor != min-pxcor and heading = 270 [
-      forward 1
-      stop
-    ]
-  ]
-  [ move-left ]; recursively call until you're not stuck anymore --> can't get into a loop as otherwise you'd not been able to get into that position
-end
-
-; make right turn of 90 degrees and move in that direction if no obstacle ahead and there is no wall
-to move-right
-  rt 90
-  ifelse [pcolor] of patch-ahead 1 != black [
-    if pycor != max-pycor and heading = 0 [
-      forward 1
-      stop
-    ]
-    if pycor != min-pycor and heading = 180 [
-      forward 1
-      stop
-    ]
-    if pxcor != max-pxcor and heading = 90 [
-      forward 1
-      stop
-    ]
-    if pxcor != min-pxcor and heading = 270 [
-      forward 1
-      stop
-    ]
-  ]
-  [ move-right ]; same as in move-left
+to end_simulation
+  if (distancexy 0 0) > 0
+  [ set color green]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-357
+210
 10
-871
-601
+455
+195
 -1
 -1
-56.0
+51.33333333333334
 1
 10
 1
@@ -217,11 +175,11 @@ GRAPHICS-WINDOW
 1
 1
 0
-8
+2
 0
-9
-1
-1
+2
+0
+0
 1
 ticks
 30.0
@@ -280,43 +238,11 @@ dirt_pct
 dirt_pct
 0
 100
-6
+53
 1
 1
 NIL
 HORIZONTAL
-
-SLIDER
-17
-169
-189
-202
-obstacle_pct
-obstacle_pct
-0
-100
-65
-1
-1
-NIL
-HORIZONTAL
-
-BUTTON
-31
-250
-94
-283
-NIL
-go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
 
 @#$#@#$#@
 ## WHAT IS IT?
