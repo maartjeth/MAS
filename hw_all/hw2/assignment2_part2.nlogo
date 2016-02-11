@@ -1,3 +1,9 @@
+; Assignment 2 - Part 2
+; Contributors:
+; Romy Blankendaal ()
+; Maartje ter Hoeve (maartje.terhoeve@student.uva.nl, 10190015)
+; Suzanne Tolmeijer ()
+
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
 ; Lab assistants: D. Formolo & L. Medeiros
@@ -17,7 +23,7 @@
 
 ; --- Global variables ---
 ; This template does not contain any global variables, but if you need them you can add them here.
-globals [x_end y_end dirt_amount finish]
+globals [x_end y_end dirt_amount visited_patches finish]
 patches-own [ variableA last_tick ]
 turtles-own [ x y ]
 
@@ -41,10 +47,10 @@ to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 2, this only involves the execution of actions (and advancing the tick counter).
   execute-actions
-  tick
-  if finish = True [
-    stop
+  ifelse finish != True [
+    tick
   ]
+  [stop]
 end
 
 
@@ -52,7 +58,7 @@ end
 to setup-patches
   ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
   clear-patches
-  ask patches [set pcolor white] ;to present all the clean patches as white patches
+  ask patches [set pcolor white] ; to present all the clean patches as white patches
   ; use dirt_pct as the percentage of available dirt
   ask n-of dirt_amount patches [ set pcolor grey ]
 end
@@ -63,7 +69,7 @@ to setup-turtles
   ; In this method you may create the agents (in this case, there is only 1 agent).
   create-turtles 1
   ask turtles [set heading 0] ; heading 0 is north
-  ask turtles [set color blue] ;giving the turtle a blue color
+  ask turtles [set color blue] ; giving the turtle a blue color
 end
 
 
@@ -74,13 +80,61 @@ to setup-ticks
 end
 
 
-; --- Execute actions ---
+; For this assignment the turtles moves up and down the grid, always starting at patch (0,0)
+; and always ending when it has visited all patches. It only changes direction when it has
+; arrived at the bottom or top of the grid.
 to execute-actions
-  ; Here you should put the code related to the actions performed by your smart vacuum cleaner: moving and cleaning.
-  ; You can separate these actions into two different methods if you want, but these methods should only be called from here!
-  ; assignment_one
-  assignment_two
+  ask turtles [
 
+    if visited_patches != 1 [
+
+      ; facing north (being on an even row)
+      if heading = 0 [
+        if pycor != max-pycor [
+          clean-dirt
+          forward 1
+          set visited_patches visited_patches - 1
+          stop
+        ]
+        if pycor = max-pycor [
+          clean-dirt
+          move-right
+          set visited_patches visited_patches - 1
+          stop
+        ]
+      ]
+
+      ; facing south (being on an odd row)
+      if heading = 180 [
+        if pycor != 0 [
+          clean-dirt
+          forward 1
+          set visited_patches visited_patches - 1
+          stop
+        ]
+        if pycor = 0 [
+          clean-dirt
+          move-left
+          set visited_patches visited_patches - 1
+          stop
+        ]
+      ]
+    ]
+
+    if visited_patches = 1 [
+      clean-dirt
+      set finish True
+      stop
+    ]
+  ]
+end
+
+; check if you see any dirt on the current patch, if so, clean
+to clean-dirt
+  if pcolor = grey [
+    set pcolor white
+    set dirt_amount dirt_amount - 1
+  ]
 end
 
 ; make a move to the right and change direction - heading 180 = southwards
@@ -95,60 +149,12 @@ to move-left
    set heading 0
 end
 
-; check if you see any dirt on the current patch, if so, clean
-to clean-dirt
-  if pcolor = grey [
-    set pcolor white
-    set dirt_amount dirt_amount - 1
-  ]
-end
-
-
-to assignment_two
-  ask turtles [
-    if visited_patches != 0 [
-      if heading = 0 [
-        if pycor != max-pycor [
-          clean-dirt
-          forward 1
-          set visited_patches visited_patches - 1
-        ]
-        if pycor = max-pycor [
-          clean-dirt
-          move-right
-        ]
-      ]
-      if heading = 180 [
-        if pycor != 0 [
-          clean-dirt
-          forward 1
-        ]
-        if pycor = 0 [
-          clean-dirt
-          move-left
-        ]
-      ]
-    ]
-    if dirt_amount = 0 [
-      set finish True
-    ]
-   ]
-
-end
-
-
-
-
-to end_simulation
-  if (distancexy 0 0) > 0
-  [ set color green]
-end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-668
-545
+780
+489
 -1
 -1
 56.0
@@ -162,11 +168,11 @@ GRAPHICS-WINDOW
 1
 1
 0
+9
+0
 7
-0
-8
-0
-0
+1
+1
 1
 ticks
 30.0

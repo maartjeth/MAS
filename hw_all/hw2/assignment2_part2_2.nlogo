@@ -17,7 +17,7 @@
 
 ; --- Global variables ---
 ; This template does not contain any global variables, but if you need them you can add them here.
-globals [x_end y_end dirt_amount finish]
+globals [x_end y_end dirt_amount visited_patches finish]
 patches-own [ variableA last_tick ]
 turtles-own [ x y ]
 
@@ -52,61 +52,33 @@ end
 to setup-patches
   ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
   clear-patches
-  ask patches [set pcolor white] ;to present all the clean patches as white patches
+  ask patches [set pcolor white] ; to present all the clean patches as white patches
   ; use dirt_pct as the percentage of available dirt
   ask n-of dirt_amount patches [ set pcolor grey ]
 end
-
 
 ; --- Setup turtles ---
 to setup-turtles
   ; In this method you may create the agents (in this case, there is only 1 agent).
   create-turtles 1
   ask turtles [set heading 0] ; heading 0 is north
-  ask turtles [set color blue] ;giving the turtle a blue color
+  ask turtles [set color blue] ; giving the turtle a blue color
 end
 
 
 ; --- Setup ticks ---
 to setup-ticks
   ; In this method you may start the tick counter.
-  reset-ticks
 end
 
 
 ; --- Execute actions ---
 to execute-actions
-  ; Here you should put the code related to the actions performed by your smart vacuum cleaner: moving and cleaning.
-  ; You can separate these actions into two different methods if you want, but these methods should only be called from here!
-  ; assignment_one
-  assignment_two
-
-end
-
-; make a move to the right and change direction - heading 180 = southwards
-to move-right
-   setxy pxcor + 1 pycor
-   set heading 180
-end
-
-; make a move to the left and change direction - heading 0 = northwards
-to move-left
-   setxy pxcor + 1 pycor
-   set heading 0
-end
-
-; check if you see any dirt on the current patch, if so, clean
-to clean-dirt
-  if pcolor = grey [
-    set pcolor white
-    set dirt_amount dirt_amount - 1
-  ]
-end
-
-
-to assignment_two
   ask turtles [
+
     if visited_patches != 0 [
+
+      ; facing north (being on an even row)
       if heading = 0 [
         if pycor != max-pycor [
           clean-dirt
@@ -116,39 +88,34 @@ to assignment_two
         if pycor = max-pycor [
           clean-dirt
           move-right
+          set visited_patches visited_patches - 1
         ]
       ]
+
+      ; facing south (being on an odd row)
       if heading = 180 [
         if pycor != 0 [
           clean-dirt
           forward 1
+          set visited_patches visited_patches - 1
         ]
         if pycor = 0 [
           clean-dirt
           move-left
+          set visited_patches visited_patches - 1
         ]
       ]
     ]
-    if dirt_amount = 0 [
+
+    if visited_patches = 0 [
       set finish True
     ]
-   ]
-
-end
-
-
-
-
-to end_simulation
-  if (distancexy 0 0) > 0
-  [ set color green]
-end
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
 10
-668
-545
+455
+209
 -1
 -1
 56.0
@@ -162,11 +129,11 @@ GRAPHICS-WINDOW
 1
 1
 0
-7
+2
 0
-8
-0
-0
+2
+1
+1
 1
 ticks
 30.0
@@ -193,7 +160,7 @@ BUTTON
 10
 143
 43
-NIL
+go
 go
 T
 1
@@ -225,45 +192,11 @@ dirt_pct
 dirt_pct
 0
 100
-13
+50
 1
 1
 NIL
 HORIZONTAL
-
-BUTTON
-35
-221
-98
-254
-NIL
-NIL
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-930
-178
-993
-211
-NIL
-go
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
 
 @#$#@#$#@
 ## WHAT IS IT?
