@@ -1,5 +1,5 @@
-; Assignment 2, part 3
-; Contributors:
+; Assignment 2, part 2
+; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
 ; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
@@ -24,8 +24,6 @@
 ; --- Global variables ---
 ; This template does not contain any global variables, but if you need them you can add them here.
 globals [x_end y_end dirt_amount visited_patches finish]
-patches-own [ variableA last_tick ]
-turtles-own [ x y ]
 
 
 ; --- Setup ---
@@ -237,27 +235,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-35
-221
-98
-254
-NIL
-NIL
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-930
-178
-993
-211
+109
+168
+172
+201
 NIL
 go
 NIL
