@@ -1,3 +1,9 @@
+; Assignment 3, part 1
+; Contributors Group 1:
+; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
+; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
+; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
+
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
 ; Lab assistants: D. Formolo & L. Medeiros
@@ -29,7 +35,7 @@
 ; 6) finish
 ; 7) desire to clean_all
 ; 8) dirt_locations
-globals [total_dirty time x_end y_end dirt_amount finish clean_all dirt_locations]
+globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate]
 
 
 ; --- Agents ---
@@ -55,9 +61,10 @@ to setup
   set time 0
   set x_end max-pxcor
   set y_end max-pycor
-  set dirt_amount floor(count patches * dirt_pct / 100)
+  set total_dirty floor(count patches * dirt_pct / 100)
   set finish false
   set clean_all true
+  set dirt_locations []
   setup-patches
   setup-vacuums
   setup-ticks
@@ -84,8 +91,9 @@ end
 ; --- Setup patches ---
 to setup-patches
   ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
+  clear-patches
   ask patches [set pcolor white]
-  ask n-of dirt_amount patches with [pcolor = white] [set pcolor grey]
+  ask n-of total_dirty patches with [pcolor = white] [set pcolor grey]
 end
 
 
@@ -95,7 +103,7 @@ to setup-vacuums
   create-vacuums 1
   ask vacuums [setxy random-xcor random-ycor]
   ask vacuums [set color yellow]
-  ask vacuums [facexy random-xcor random-ycor]
+  ask vacuums [facexy random-xcor random-ycor] ; Romy: what is happening here?
 end
 
 
@@ -107,7 +115,18 @@ end
 
 ; --- Setup beliefs ---
 to setup-beliefs
-  ; voor iedere patch, als bruin dan locatie toevoegen aan dirt_locations
+  ; voor iedere patch, als grijs dan locatie toevoegen aan dirt_locations
+  ask patches [
+    if pcolor = grey [
+      ; first create a list, coordinate, which stores the coordinates of the patch
+      set coordinate (list pxcor pycor)
+      ;print coordinate ; debug line
+      ; place this coordinate list into the list which stores all the coordinates
+      set dirt_locations lput coordinate dirt_locations
+      print dirt_locations   ;debug line
+    ]
+
+  ]
 end
 
 
@@ -123,14 +142,15 @@ to update-desires
   ; You should update your agent's desires here.
   ; At the beginning your agent should have the desire to clean all the dirt.
   ; If it realises that there is no more dirt, its desire should change to something like 'stop and turn off'.
+
   ask vacuums [
-    ifelse dirt_amount != 0 [
+    ifelse total_dirty != 0 [
       set clean_all true
       set desire clean_all
     ]
     [
       set clean_all false
-      set desire clean_all
+      set finish true ;when there is no dirt anymore -> stop (dit is dubbel, zie clean-dirt, een van de twee kan weg...)
     ]
   ]
 end
@@ -155,6 +175,45 @@ end
 ; --- Execute actions ---
 to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving and cleaning (and in Assignment 3.3, throwing away dirt).
+  ask vacuums [
+    if total_dirty != 0 [
+      clean-dirt
+      move
+    ]
+  ]
+end
+
+to clean-dirt
+  if pcolor = grey [
+    set pcolor white
+    set total_dirty total_dirty - 1
+    print "cleaned dirt"
+    if total_dirty = 0 [
+      set finish true
+    ]
+  ]
+end
+
+to move
+  ask vacuums  [facexy random-xcor random-ycor]  ; should be changes to the location of the dirt stored in dirt_locations
+
+  ; check boundraries walls (Romy: kunnen we deze manier zo nog wel gebruiken nu de agent alle kanten op kan gaan?)
+  if pycor != max-pycor and heading = 0 [
+      forward 1
+      stop
+    ]
+    if pycor != min-pycor and heading = 180 [
+      forward 1
+      stop
+    ]
+    if pxcor != max-pxcor and heading = 90 [
+      forward 1
+      stop
+    ]
+    if pxcor != min-pxcor and heading = 270 [
+      forward 1
+      stop
+    ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -193,7 +252,7 @@ dirt_pct
 dirt_pct
 0
 100
-20
+2
 1
 1
 NIL
