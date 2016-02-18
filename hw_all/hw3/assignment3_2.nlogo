@@ -1,12 +1,9 @@
-<<<<<<< HEAD
-=======
 ; Assignment 3, part 1
 ; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
 ; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
 
->>>>>>> origin/master
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
 ; Lab assistants: D. Formolo & L. Medeiros
@@ -38,11 +35,7 @@
 ; 6) finish
 ; 7) desire to clean_all
 ; 8) dirt_locations
-<<<<<<< HEAD
-globals [total_dirty time x_end y_end dirt_amount finish clean_all dirt_locations]
-=======
 globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y]
->>>>>>> origin/master
 
 
 ; --- Agents ---
@@ -68,16 +61,10 @@ to setup
   set time 0
   set x_end max-pxcor
   set y_end max-pycor
-<<<<<<< HEAD
-  set dirt_amount floor(count patches * dirt_pct / 100)
-  set finish false
-  set clean_all true
-=======
   set total_dirty floor(count patches * dirt_pct / 100)
   set finish false
   set clean_all true
   set dirt_locations []
->>>>>>> origin/master
   setup-patches
   setup-vacuums
   setup-ticks
@@ -91,11 +78,6 @@ to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
   update-desires
-<<<<<<< HEAD
-  update-beliefs
-  update-intentions
-  execute-actions
-=======
   print "updated desires"
   update-beliefs
   print "updated beliefs"
@@ -103,7 +85,6 @@ to go
   print "updated intentions"
   execute-actions
   print "executed actions"
->>>>>>> origin/master
   tick
   if finish = true [
     stop
@@ -114,14 +95,9 @@ end
 ; --- Setup patches ---
 to setup-patches
   ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
-<<<<<<< HEAD
-  ask patches [set pcolor white]
-  ask n-of dirt_amount patches with [pcolor = white] [set pcolor grey]
-=======
   clear-patches
   ask patches [set pcolor white]
   ask n-of total_dirty patches with [pcolor = white] [set pcolor grey]
->>>>>>> origin/master
 end
 
 
@@ -131,25 +107,12 @@ to setup-vacuums
   create-vacuums 1
   ask vacuums [setxy random-xcor random-ycor]
   ask vacuums [set color yellow]
-<<<<<<< HEAD
-  ask vacuums [facexy random-xcor random-ycor]
-=======
   ask vacuums [facexy random-xcor random-ycor] ; Romy: what is happening here?
->>>>>>> origin/master
 end
 
 
 ; --- Setup ticks ---
 to setup-ticks
-<<<<<<< HEAD
-  ; In this method you may start the tick counter.
-  reset-ticks
-end
-
-; --- Setup beliefs ---
-to setup-beliefs
-  ; voor iedere patch, als bruin dan locatie toevoegen aan dirt_locations
-=======
   reset-ticks
 end
 
@@ -161,9 +124,19 @@ to setup-beliefs
     if pcolor = grey [
       set coordinate (list pxcor pycor)                   ; first create a list, coordinate, which stores the coordinates of the patch
       set dirt_locations lput coordinate dirt_locations   ; place this coordinate list into the list which stores all the coordinates
+      ; set dirt_locations sort-by [[distance patch] of vacuum 1] dirt_locations
+
+      ; sort-by [distance patch vacuum 1] dirt_locations
+
+      ;[ distance patch 1 1 ] of patch 0 0
     ]
   ]
->>>>>>> origin/master
+
+  ask vacuums [
+    set dirt_locations sort-by [distancexy item 0 dirt_locations item 1 dirt_locations ?1 < distancexy item 0 dirt_locations item 1 dirt_locations ?2] dirt_locations
+
+    ;example: show sort-by [length ?1 < length ?2] ["Grumpy" "Doc" "Happy"]
+  ]
 end
 
 
@@ -174,33 +147,21 @@ to setup-desires
   ]
 end
 
-<<<<<<< HEAD
-=======
 
->>>>>>> origin/master
 ; --- Update desires ---
 to update-desires
   ; You should update your agent's desires here.
   ; At the beginning your agent should have the desire to clean all the dirt.
   ; If it realises that there is no more dirt, its desire should change to something like 'stop and turn off'.
-<<<<<<< HEAD
-  ask vacuums [
-    ifelse dirt_amount != 0 [
-=======
 
   ask vacuums [
     ifelse total_dirty != 0 [
->>>>>>> origin/master
       set clean_all true
       set desire clean_all
     ]
     [
       set clean_all false
-<<<<<<< HEAD
-      set desire clean_all
-=======
       set finish true ;when there is no dirt anymore -> stop (dit is dubbel, zie clean-dirt, een van de twee kan weg...)
->>>>>>> origin/master
     ]
   ]
 end
@@ -212,15 +173,6 @@ to update-beliefs
  ; At the beginning your agent will receive global information about where all the dirty locations are.
  ; This belief set needs to be updated frequently according to the cleaning actions: if you clean dirt, you do not believe anymore there is a dirt at that location.
  ; In Assignment 3.3, your agent also needs to know where is the garbage can.
-<<<<<<< HEAD
-end
-
-
-; --- Update intentions ---
-to update-intentions
-  ; You should update your agent's intentions here.
-  ; The agent's intentions should be dependent on its beliefs and desires.
-=======
 
   ask vacuums [
    let check_intention item 0 dirt_locations
@@ -249,15 +201,12 @@ to update-intentions
     set int_y item 1 intention
     facexy int_x int_y
   ]
->>>>>>> origin/master
 end
 
 
 ; --- Execute actions ---
 to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving and cleaning (and in Assignment 3.3, throwing away dirt).
-<<<<<<< HEAD
-=======
   ask vacuums [
     if total_dirty != 0 [
       clean-dirt
@@ -281,7 +230,6 @@ to move
   if xcor != int_x and ycor != int_y [
     forward 1
   ]
->>>>>>> origin/master
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -320,11 +268,7 @@ dirt_pct
 dirt_pct
 0
 100
-<<<<<<< HEAD
-20
-=======
-2
->>>>>>> origin/master
+0
 1
 1
 NIL
