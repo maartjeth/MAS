@@ -126,20 +126,10 @@ to setup-beliefs
     ]
   ]
 
-<<<<<<< HEAD
   ask vacuums [
     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
     set beliefs dirt_locations
   ]
-=======
-  sort-list
-
-  ;ask vacuums [
-  ;  set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    ;print "dirt locations"
-    ;print dirt_locations
-  ;]
->>>>>>> 45f93725ded46720a1d7c435fab7bf9849cd8a6a
 end
 
 
@@ -174,7 +164,6 @@ to update-beliefs
  ; At the beginning your agent will receive global information about where all the dirty locations are.
  ; This belief set needs to be updated frequently according to the cleaning actions: if you clean dirt, you do not believe anymore there is a dirt at that location.
  ; In Assignment 3.3, your agent also needs to know where is the garbage can.
-<<<<<<< HEAD
  ;
  ; When the vacuum believes there is no more dirt, it's belief will have an empty list, since there is only one belief: the locations of the dirt.
 
@@ -188,21 +177,6 @@ to update-beliefs
          set dirt_locations remove-item 0 dirt_locations
        ]
      ]
-=======
-
- ask vacuums [
-   let check_intention item 0 dirt_locations
-   print check_intention
-   set check_int_x item 0 check_intention
-   set check_int_y item 1 check_intention
- ]
-
- ask patch check_int_x check_int_y [
-   if pcolor = white [
-     ; print "it's white"
-     set dirt_locations remove-item 0 dirt_locations
-     ; print dirt_locations
->>>>>>> 45f93725ded46720a1d7c435fab7bf9849cd8a6a
    ]
  ]
 
