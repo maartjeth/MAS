@@ -1,4 +1,4 @@
-; Assignment 3, part 1
+; Assignment 3, part 2
 ; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
@@ -64,7 +64,7 @@ to setup
   set total_dirty floor(count patches * dirt_pct / 100)
   set finish false
   set clean_all true
-  set dirt_locations []
+  set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
   setup-patches
   setup-vacuums
   setup-ticks
@@ -77,16 +77,21 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
+  ask turtles [set beliefs dirt_locations] ;for displaying the beliefs (or locations of the dirt)
   update-desires
-  print "updated desires"
+  ; print "updated desires"
   update-beliefs
-  print "updated beliefs"
+  ; print "updated beliefs"
   update-intentions
-  print "updated intentions"
+  ; print "updated intentions"
   execute-actions
-  print "executed actions"
+  ; print "executed actions"
   tick
   if finish = true [
+    ; to make it visible that the agents has no desire, beliefs and intentions
+    ask turtles [set desire false]
+    ask turtles [set beliefs []]
+    ask turtles [set intention []]
     stop
   ]
 end
@@ -107,7 +112,7 @@ to setup-vacuums
   create-vacuums 1
   ask vacuums [setxy random-xcor random-ycor]
   ask vacuums [set color yellow]
-  ask vacuums [facexy random-xcor random-ycor] ; Romy: what is happening here?
+  ask vacuums [facexy random-xcor random-ycor]
 end
 
 
@@ -172,9 +177,9 @@ to update-beliefs
 
  ask patch check_int_x check_int_y [
    if pcolor = white [
-     print "it's white"
+     ; print "it's white"
      set dirt_locations remove-item 0 dirt_locations
-     print dirt_locations
+     ; print dirt_locations
    ]
  ]
 
