@@ -1,4 +1,4 @@
-; Assignment 3, part 2
+; Assignment 3, part 1
 ; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
@@ -64,7 +64,7 @@ to setup
   set total_dirty floor(count patches * dirt_pct / 100)
   set finish false
   set clean_all true
-  set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
+  set dirt_locations []
   setup-patches
   setup-vacuums
   setup-ticks
@@ -77,21 +77,16 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
-  ask vacuums [set beliefs dirt_locations] ;for displaying the beliefs (or locations of the dirt)
   update-desires
-  ; print "updated desires"
+  print "updated desires"
   update-beliefs
-  ; print "updated beliefs"
+  print "updated beliefs"
   update-intentions
-  ; print "updated intentions"
+  print "updated intentions"
   execute-actions
-  ; print "executed actions"
+  print "executed actions"
   tick
   if finish = true [
-    ; to make it visible that the agents has no desire, beliefs and intentions
-    ask vacuums [set desire false]
-    ask vacuums [set beliefs []]
-    ask vacuums [set intention []]
     stop
   ]
 end
@@ -112,7 +107,7 @@ to setup-vacuums
   create-vacuums 1
   ask vacuums [setxy random-xcor random-ycor]
   ask vacuums [set color yellow]
-  ask vacuums [facexy random-xcor random-ycor]
+  ask vacuums [facexy random-xcor random-ycor] ; Romy: what is happening here?
 end
 
 
@@ -129,10 +124,15 @@ to setup-beliefs
     if pcolor = grey [
       set coordinate (list pxcor pycor)                   ; first create a list, coordinate, which stores the coordinates of the patch
       set dirt_locations lput coordinate dirt_locations   ; place this coordinate list into the list which stores all the coordinates
+      ; set dirt_locations sort-by [[distance patch] of vacuum 1] dirt_locations
+
+      ; sort-by [distance patch vacuum 1] dirt_locations
+
+      ;[ distance patch 1 1 ] of patch 0 0
     ]
   ]
 
-   ask vacuums [
+  ask vacuums [
     let dirt item 0 dirt_locations
     let x_dirt item 0 dirt
     let y_dirt item 1 dirt
@@ -187,9 +187,9 @@ to update-beliefs
 
  ask patch check_int_x check_int_y [
    if pcolor = white [
-     ; print "it's white"
+     print "it's white"
      set dirt_locations remove-item 0 dirt_locations
-     ; print dirt_locations
+     print dirt_locations
    ]
  ]
 
@@ -200,8 +200,6 @@ to update-intentions
   ; get the first intention out of the intention list
   ; change the turtles direction into the direction of the intended patch
   ask vacuums [
-
-    print dirt_locations
     set intention item 0 dirt_locations
     set int_x item 0 intention
     set int_y item 1 intention
@@ -274,7 +272,7 @@ dirt_pct
 dirt_pct
 0
 100
-2
+3
 1
 1
 NIL
