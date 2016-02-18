@@ -124,18 +124,7 @@ to setup-beliefs
     if pcolor = grey [
       set coordinate (list pxcor pycor)                   ; first create a list, coordinate, which stores the coordinates of the patch
       set dirt_locations lput coordinate dirt_locations   ; place this coordinate list into the list which stores all the coordinates
-      ; set dirt_locations sort-by [[distance patch] of vacuum 1] dirt_locations
-
-      ; sort-by [distance patch vacuum 1] dirt_locations
-
-      ;[ distance patch 1 1 ] of patch 0 0
     ]
-  ]
-
-  ask vacuums [
-    set dirt_locations sort-by [distancexy item 0 dirt_locations item 1 dirt_locations ?1 < distancexy item 0 dirt_locations item 1 dirt_locations ?2] dirt_locations
-
-    ;example: show sort-by [length ?1 < length ?2] ["Grumpy" "Doc" "Happy"]
   ]
 end
 
@@ -268,7 +257,7 @@ dirt_pct
 dirt_pct
 0
 100
-0
+2
 1
 1
 NIL
