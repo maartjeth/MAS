@@ -77,7 +77,7 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
-  ask turtles [set beliefs dirt_locations] ;for displaying the beliefs (or locations of the dirt)
+  ask vacuums [set beliefs dirt_locations] ;for displaying the beliefs (or locations of the dirt)
   update-desires
   ; print "updated desires"
   update-beliefs
@@ -89,9 +89,9 @@ to go
   tick
   if finish = true [
     ; to make it visible that the agents has no desire, beliefs and intentions
-    ask turtles [set desire false]
-    ask turtles [set beliefs []]
-    ask turtles [set intention []]
+    ask vacuums [set desire false]
+    ask vacuums [set beliefs []]
+    ask vacuums [set intention []]
     stop
   ]
 end
@@ -190,6 +190,8 @@ to update-intentions
   ; get the first intention out of the intention list
   ; change the turtles direction into the direction of the intended patch
   ask vacuums [
+
+    print dirt_locations
     set intention item 0 dirt_locations
     set int_x item 0 intention
     set int_y item 1 intention
