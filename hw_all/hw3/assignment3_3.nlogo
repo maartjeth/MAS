@@ -1,4 +1,4 @@
-; Assignment 3, part 2
+; Assignment 3, part 3
 ; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
@@ -7,6 +7,11 @@
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
 ; Lab assistants: D. Formolo & L. Medeiros
+
+
+; --- Assignment 3 - Template ---
+; Please use this template as a basis for the code to generate the behaviour of your smart vacuum cleaner.
+; However, feel free to extend this with any variable or method you think is necessary.
 
 
 ; --- Settable variables ---
@@ -26,14 +31,11 @@
 ;
 ; 3) x_end
 ; 4) y_end
-; 6) desire to clean_all
-; 7) dirt_locations
-; 8) coordinate
-; 9) int_x
-; 10) int_y
-; 11) check_int_x
-; 12) check_int_y
-globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y]
+; 5) dirt_amount
+; 6) finish
+; 7) desire to clean_all
+; 8) dirt_locations
+globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y pos_bin]
 
 
 ; --- Agents ---
@@ -41,6 +43,7 @@ globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x 
 ;
 ; 1) vacuums: vacuum cleaner agents.
 breed [vacuums vacuum]
+breed [bins bin] ; added for part 3
 
 
 ; --- Local variables ---
@@ -50,7 +53,7 @@ breed [vacuums vacuum]
 ; 1) beliefs: the agent's belief base about locations that contain dirt
 ; 2) desire: the agent's current desire
 ; 3) intention: the agent's current intention
-vacuums-own [beliefs desire intention]
+vacuums-own [beliefs desire intention dirt_in_bag] ; added dirt in bag to have a variable that stores how much dirt the vacuum cleaner has in its bag
 
 
 ; --- Setup ---
@@ -60,10 +63,12 @@ to setup
   set x_end max-pxcor
   set y_end max-pycor
   set total_dirty floor(count patches * dirt_pct / 100)
-  set clean_all true    ; create the desire for the vacuum to clean or not
+  set finish false
+  set clean_all true
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
   setup-patches
   setup-vacuums
+  setup-bins
   setup-ticks
   setup-beliefs
   setup-desires
@@ -74,39 +79,53 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
-  update-beliefs
+  ask vacuums [set beliefs dirt_locations] ;for displaying the beliefs (or locations of the dirt)
   update-desires
+  ; print "updated desires"
+  update-beliefs
+  ; print "updated beliefs"
   update-intentions
-  ; If the vacuum does not believe there is anything left to clean and does not have the desire or intention to clean anymore, we can stop.
-
+  ; print "updated intentions"
   execute-actions
-  if dirt_locations != [] [tick]
-  set time ticks
-
-  ask vacuums [
-    if beliefs = [] and desire = false and intention = [] [
-      stop
-    ]
+  ; print "executed actions"
+  tick
+  if finish = true [
+    ; to make it visible that the agents has no desire, beliefs and intentions
+    ask vacuums [set desire false]
+    ask vacuums [set beliefs []]
+    ask vacuums [set intention []]
+    stop
   ]
 end
 
 
 ; --- Setup patches ---
 to setup-patches
-  ; Patches that are dirty will get the color grey, white ones are clean
+  ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
   clear-patches
   ask patches [set pcolor white]
   ask n-of total_dirty patches with [pcolor = white] [set pcolor grey]
 end
 
+to setup-bins
+  create-bins 1
+  ask bins [
+    setxy random-xcor random-ycor
+    set shape "house"
+    set color blue
+  ]
+end
 
 ; --- Setup vacuums ---
 to setup-vacuums
-  ; One pretty yellow vacuum cleaner is initialized at a random location with a random orientation.
+  ; In this method you may create the vacuum cleaner agents (in this case, there is only 1 vacuum cleaner agent).
   create-vacuums 1
-  ask vacuums [setxy random-xcor random-ycor]
-  ask vacuums [set color yellow]
-  ask vacuums [facexy random-xcor random-ycor]
+  ask vacuums [
+    setxy random-xcor random-ycor
+    set color yellow
+    facexy random-xcor random-ycor
+    set dirt_in_bag 0
+  ]
 end
 
 
@@ -118,7 +137,7 @@ end
 
 ; --- Setup beliefs ---
 to setup-beliefs
-  ; for all patches, if grey, then add to belief list --> the vacuum believes these locations are dirty
+  ; for all patches, if grey, then add to belief list --> these need to be cleaned
   ask patches [
     if pcolor = grey [
       set coordinate (list pxcor pycor)                   ; first create a list, coordinate, which stores the coordinates of the patch
@@ -126,20 +145,13 @@ to setup-beliefs
     ]
   ]
 
-<<<<<<< HEAD
   ask vacuums [
     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    set beliefs dirt_locations
   ]
-=======
-  sort-list
 
-  ;ask vacuums [
-  ;  set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    ;print "dirt locations"
-    ;print dirt_locations
-  ;]
->>>>>>> 45f93725ded46720a1d7c435fab7bf9849cd8a6a
+  ask bins [
+    set pos_bin (list xcor ycor)  ; doesn't floor properly??
+  ]
 end
 
 
@@ -153,16 +165,18 @@ end
 
 ; --- Update desires ---
 to update-desires
-  ; If the vacuum still beliefs there are dirty spots somewhere, it will keep the desire to clean everything.
-  ; If it believes there are no more dirty spots, it will no longer have the desire to clean.
+  ; You should update your agent's desires here.
+  ; At the beginning your agent should have the desire to clean all the dirt.
+  ; If it realises that there is no more dirt, its desire should change to something like 'stop and turn off'.
 
   ask vacuums [
-    ifelse beliefs != [] [
+    ifelse total_dirty != 0 [
       set clean_all true
       set desire clean_all
     ]
     [
       set clean_all false
+      set finish true ;when there is no dirt anymore -> stop (dit is dubbel, zie clean-dirt, een van de twee kan weg...)
     ]
   ]
 end
@@ -174,25 +188,10 @@ to update-beliefs
  ; At the beginning your agent will receive global information about where all the dirty locations are.
  ; This belief set needs to be updated frequently according to the cleaning actions: if you clean dirt, you do not believe anymore there is a dirt at that location.
  ; In Assignment 3.3, your agent also needs to know where is the garbage can.
-<<<<<<< HEAD
- ;
- ; When the vacuum believes there is no more dirt, it's belief will have an empty list, since there is only one belief: the locations of the dirt.
 
- ask vacuums [
-   if beliefs != [] [
-     let check_beliefs item 0 beliefs
-     set check_int_x item 0 check_beliefs
-     set check_int_y item 1 check_beliefs
-     ask patch check_int_x check_int_y [
-       if pcolor = white [
-         set dirt_locations remove-item 0 dirt_locations
-       ]
-     ]
-=======
-
- ask vacuums [
+  ask vacuums [
    let check_intention item 0 dirt_locations
-   print check_intention
+   ;print check_intention
    set check_int_x item 0 check_intention
    set check_int_y item 1 check_intention
  ]
@@ -202,32 +201,27 @@ to update-beliefs
      ; print "it's white"
      set dirt_locations remove-item 0 dirt_locations
      ; print dirt_locations
->>>>>>> 45f93725ded46720a1d7c435fab7bf9849cd8a6a
    ]
  ]
 
- ask vacuums [
-    set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    set beliefs dirt_locations
-  ]
 end
 
 ; --- Update intentions ---
 to update-intentions
-  ; If the vacuum believes there are dirty spots somewhere and has the desire to clean, it will get the intention to clean the first location in the beliefs list.
-  ; The vacuum will face the location of this first dirty spot.
-  ;
-  ; If the vacuum does not have the desire to clean, or believes there are no dirty spots anymore, it will have no intentions.
-  ;
+  ; get the first intention out of the intention list
+  ; change the turtles direction into the direction of the intended patch
   ask vacuums [
-    ifelse beliefs != [] and desire = true [
+    ifelse dirt_in_bag < max_garbage [  ; if it doesn't carry the maximum amount of dirt, go to clean a new patch
       set intention item 0 dirt_locations
-      set int_x item 0 intention
-      set int_y item 1 intention
-      facexy int_x int_y
-    ][
-      set intention []
+    ] ; else: go and empty your bag
+
+    [ set intention pos_bin
     ]
+
+    set int_x item 0 intention
+    set int_y item 1 intention
+    facexy int_x int_y
+
   ]
 end
 
@@ -236,7 +230,7 @@ end
 to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving and cleaning (and in Assignment 3.3, throwing away dirt).
   ask vacuums [
-    if intention != [] [
+    if total_dirty != 0 [
       clean-dirt
       move
     ]
@@ -244,26 +238,21 @@ to execute-actions
 end
 
 to clean-dirt
-  ; To clean in our case means turning a patch from grey to white again. The total amount of dirty spots will be updated.
   if pcolor = grey [
     set pcolor white
     set total_dirty total_dirty - 1
-    sort-list
+    set dirt_in_bag dirt_in_bag + 1
     print "cleaned dirt"
+    ;print dirt_in_bag
+    if total_dirty = 0 [
+      set finish true
+    ]
   ]
 end
 
 to move
   if xcor != int_x and ycor != int_y [
     forward 1
-  ]
-end
-
-to sort-list
-  ask vacuums [
-    set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    ;print "dirt locations"
-    ;print dirt_locations
   ]
 end
 @#$#@#$#@
@@ -303,7 +292,7 @@ dirt_pct
 dirt_pct
 0
 100
-4
+2
 1
 1
 NIL
@@ -414,6 +403,21 @@ The agent's current intention.
 17
 1
 11
+
+SLIDER
+12
+338
+778
+371
+max_garbage
+max_garbage
+0
+100
+5
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
