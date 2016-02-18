@@ -131,6 +131,11 @@ to setup-beliefs
       set dirt_locations lput coordinate dirt_locations   ; place this coordinate list into the list which stores all the coordinates
     ]
   ]
+
+  ask vacuums [
+    set dirt_locations sort-by [distancexy item 0 dirt_locations item 1 dirt_locations ?1 < distancexy item 0 dirt_locations item 1 dirt_locations ?2] dirt_locations
+    ; example: show sort-by [length ?1 < length ?2 ] [ "Grumpy" "Doc" "Happy"]
+  ]
 end
 
 
