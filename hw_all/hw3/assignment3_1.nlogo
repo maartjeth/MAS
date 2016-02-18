@@ -78,14 +78,16 @@ to go
   update-desires
   update-intentions
   ; If the vacuum does not believe there is anything left to clean and does not have the desire or intention to clean anymore, we can stop.
+
+  execute-actions
+  if dirt_locations != [] [tick]
+  set time ticks
+
   ask vacuums [
     if beliefs = [] and desire = false and intention = [] [
       stop
     ]
   ]
-  execute-actions
-  tick
-  set time ticks
 end
 
 
@@ -162,16 +164,17 @@ to update-beliefs
  ; When the vacuum believes there is no more dirt, it's belief will have an empty list, since there is only one belief: the locations of the dirt.
 
  ask vacuums [
-   let check_beliefs item 0 beliefs
-   set check_int_x item 0 check_beliefs
-   set check_int_y item 1 check_beliefs
-
- ask patch check_int_x check_int_y [
-   if pcolor = white [
-     set dirt_locations remove-item 0 dirt_locations
+   if beliefs != [] [
+     let check_beliefs item 0 beliefs
+     set check_int_x item 0 check_beliefs
+     set check_int_y item 1 check_beliefs
+     ask patch check_int_x check_int_y [
+       if pcolor = white [
+         set dirt_locations remove-item 0 dirt_locations
+       ]
+     ]
    ]
  ]
-
  ask vacuums [set beliefs dirt_locations]
 end
 
@@ -257,7 +260,7 @@ dirt_pct
 dirt_pct
 0
 100
-2
+6
 1
 1
 NIL
