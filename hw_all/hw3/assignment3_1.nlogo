@@ -35,7 +35,7 @@
 ; 6) finish
 ; 7) desire to clean_all
 ; 8) dirt_locations
-globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate]
+globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y]
 
 
 ; --- Agents ---
@@ -78,9 +78,13 @@ to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
   update-desires
+  print "updated desires"
   update-beliefs
+  print "updated beliefs"
   update-intentions
+  print "updated intentions"
   execute-actions
+  print "executed actions"
   tick
   if finish = true [
     stop
@@ -109,23 +113,18 @@ end
 
 ; --- Setup ticks ---
 to setup-ticks
-  ; In this method you may start the tick counter.
   reset-ticks
 end
 
+
 ; --- Setup beliefs ---
 to setup-beliefs
-  ; voor iedere patch, als grijs dan locatie toevoegen aan dirt_locations
+  ; for all patches, if grey, then add to belief list --> these need to be cleaned
   ask patches [
     if pcolor = grey [
-      ; first create a list, coordinate, which stores the coordinates of the patch
-      set coordinate (list pxcor pycor)
-      ;print coordinate ; debug line
-      ; place this coordinate list into the list which stores all the coordinates
-      set dirt_locations lput coordinate dirt_locations
-      print dirt_locations   ;debug line
+      set coordinate (list pxcor pycor)                   ; first create a list, coordinate, which stores the coordinates of the patch
+      set dirt_locations lput coordinate dirt_locations   ; place this coordinate list into the list which stores all the coordinates
     ]
-
   ]
 end
 
@@ -136,6 +135,7 @@ to setup-desires
     set desire clean_all
   ]
 end
+
 
 ; --- Update desires ---
 to update-desires
@@ -162,13 +162,34 @@ to update-beliefs
  ; At the beginning your agent will receive global information about where all the dirty locations are.
  ; This belief set needs to be updated frequently according to the cleaning actions: if you clean dirt, you do not believe anymore there is a dirt at that location.
  ; In Assignment 3.3, your agent also needs to know where is the garbage can.
-end
 
+  ask vacuums [
+   let check_intention item 0 dirt_locations
+   print check_intention
+   set check_int_x item 0 check_intention
+   set check_int_y item 1 check_intention
+ ]
+
+ ask patch check_int_x check_int_y [
+   if pcolor = white [
+     print "it's white"
+     set dirt_locations remove-item 0 dirt_locations
+     print dirt_locations
+   ]
+ ]
+
+end
 
 ; --- Update intentions ---
 to update-intentions
-  ; You should update your agent's intentions here.
-  ; The agent's intentions should be dependent on its beliefs and desires.
+  ; get the first intention out of the intention list
+  ; change the turtles direction into the direction of the intended patch
+  ask vacuums [
+    set intention item 0 dirt_locations
+    set int_x item 0 intention
+    set int_y item 1 intention
+    facexy int_x int_y
+  ]
 end
 
 
@@ -195,25 +216,9 @@ to clean-dirt
 end
 
 to move
-  ask vacuums  [facexy random-xcor random-ycor]  ; should be changes to the location of the dirt stored in dirt_locations
-
-  ; check boundraries walls (Romy: kunnen we deze manier zo nog wel gebruiken nu de agent alle kanten op kan gaan?)
-  if pycor != max-pycor and heading = 0 [
-      forward 1
-      stop
-    ]
-    if pycor != min-pycor and heading = 180 [
-      forward 1
-      stop
-    ]
-    if pxcor != max-pxcor and heading = 90 [
-      forward 1
-      stop
-    ]
-    if pxcor != min-pxcor and heading = 270 [
-      forward 1
-      stop
-    ]
+  if xcor != int_x and ycor != int_y [
+    forward 1
+  ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
