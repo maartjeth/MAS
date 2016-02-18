@@ -1,4 +1,4 @@
-; Assignment 3, part 2
+; Assignment 3, part 3
 ; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
@@ -35,7 +35,7 @@
 ; 6) finish
 ; 7) desire to clean_all
 ; 8) dirt_locations
-globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y]
+globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y pos_bin]
 
 
 ; --- Agents ---
@@ -43,6 +43,7 @@ globals [total_dirty time x_end y_end finish clean_all dirt_locations coordinate
 ;
 ; 1) vacuums: vacuum cleaner agents.
 breed [vacuums vacuum]
+breed [bins bin] ; added for part 3
 
 
 ; --- Local variables ---
@@ -52,7 +53,7 @@ breed [vacuums vacuum]
 ; 1) beliefs: the agent's belief base about locations that contain dirt
 ; 2) desire: the agent's current desire
 ; 3) intention: the agent's current intention
-vacuums-own [beliefs desire intention]
+vacuums-own [beliefs desire intention dirt_in_bag] ; added dirt in bag to have a variable that stores how much dirt the vacuum cleaner has in its bag
 
 
 ; --- Setup ---
@@ -67,6 +68,7 @@ to setup
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
   setup-patches
   setup-vacuums
+  setup-bins
   setup-ticks
   setup-beliefs
   setup-desires
@@ -105,14 +107,25 @@ to setup-patches
   ask n-of total_dirty patches with [pcolor = white] [set pcolor grey]
 end
 
+to setup-bins
+  create-bins 1
+  ask bins [
+    setxy random-xcor random-ycor
+    set shape "house"
+    set color blue
+  ]
+end
 
 ; --- Setup vacuums ---
 to setup-vacuums
   ; In this method you may create the vacuum cleaner agents (in this case, there is only 1 vacuum cleaner agent).
   create-vacuums 1
-  ask vacuums [setxy random-xcor random-ycor]
-  ask vacuums [set color yellow]
-  ask vacuums [facexy random-xcor random-ycor]
+  ask vacuums [
+    setxy random-xcor random-ycor
+    set color yellow
+    facexy random-xcor random-ycor
+    set dirt_in_bag 0
+  ]
 end
 
 
@@ -132,13 +145,13 @@ to setup-beliefs
     ]
   ]
 
-  sort-list
+  ask vacuums [
+    set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
+  ]
 
-  ;ask vacuums [
-  ;  set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    ;print "dirt locations"
-    ;print dirt_locations
-  ;]
+  ask bins [
+    set pos_bin (list xcor ycor)  ; doesn't floor properly??
+  ]
 end
 
 
@@ -176,9 +189,9 @@ to update-beliefs
  ; This belief set needs to be updated frequently according to the cleaning actions: if you clean dirt, you do not believe anymore there is a dirt at that location.
  ; In Assignment 3.3, your agent also needs to know where is the garbage can.
 
- ask vacuums [
+  ask vacuums [
    let check_intention item 0 dirt_locations
-   print check_intention
+   ;print check_intention
    set check_int_x item 0 check_intention
    set check_int_y item 1 check_intention
  ]
@@ -198,12 +211,17 @@ to update-intentions
   ; get the first intention out of the intention list
   ; change the turtles direction into the direction of the intended patch
   ask vacuums [
+    ifelse dirt_in_bag < max_garbage [  ; if it doesn't carry the maximum amount of dirt, go to clean a new patch
+      set intention item 0 dirt_locations
+    ] ; else: go and empty your bag
 
-    print dirt_locations
-    set intention item 0 dirt_locations
+    [ set intention pos_bin
+    ]
+
     set int_x item 0 intention
     set int_y item 1 intention
     facexy int_x int_y
+
   ]
 end
 
@@ -223,8 +241,9 @@ to clean-dirt
   if pcolor = grey [
     set pcolor white
     set total_dirty total_dirty - 1
-    sort-list
+    set dirt_in_bag dirt_in_bag + 1
     print "cleaned dirt"
+    ;print dirt_in_bag
     if total_dirty = 0 [
       set finish true
     ]
@@ -234,14 +253,6 @@ end
 to move
   if xcor != int_x and ycor != int_y [
     forward 1
-  ]
-end
-
-to sort-list
-  ask vacuums [
-    set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    ;print "dirt locations"
-    ;print dirt_locations
   ]
 end
 @#$#@#$#@
@@ -392,6 +403,21 @@ The agent's current intention.
 17
 1
 11
+
+SLIDER
+12
+338
+778
+371
+max_garbage
+max_garbage
+0
+100
+5
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
