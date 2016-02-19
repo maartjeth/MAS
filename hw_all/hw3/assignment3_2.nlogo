@@ -278,7 +278,7 @@ dirt_pct
 dirt_pct
 0
 100
-4
+6
 1
 1
 NIL
