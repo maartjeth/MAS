@@ -33,9 +33,11 @@
 ; 10) int_y
 ; 11) check_int_x
 ; 12) check_int_y
-; 13) pos_bin
-; 14) desire to empty_bag
-globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y pos_bin empty_bag]
+; 13) intention clean_dirt
+; 14) intention move_to_bin
+; 15) intention move_to_dirt
+; 16) intention empty_bag --> voeg comment toe extra intentie
+globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag]
 
 
 ; --- Agents ---
@@ -64,8 +66,9 @@ to setup
   set y_end max-pycor
   set total_dirty floor(count patches * dirt_pct / 100)
   set clean_all true    ; create the desire for the vacuum to clean or not
-  set empty_bag false   ; create the desire for the vacuum to empty its bag
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
+  set move_to_bin []    ; comment
+  set move_to_dirt []   ; comment
   setup-patches
   setup-vacuums
   setup-bins
@@ -112,6 +115,7 @@ to setup-bins
     setxy random-xcor random-ycor
     set shape "house"
     set color blue
+    set move_to_bin list xcor ycor
   ]
 end
 
@@ -147,10 +151,7 @@ to setup-beliefs
   ask vacuums [
     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
     set beliefs dirt_locations
-  ]
-
-  ask bins [
-    set pos_bin (list xcor ycor)  ; doesn't floor properly??
+    set move_to_dirt item 0 beliefs
   ]
 end
 
@@ -167,28 +168,19 @@ end
 
 ; --- Update desires ---
 to update-desires
-  ; If the vacuum still beliefs there are dirty spots somewhere and does not have a full garbage bag, it will keep the desire to clean everything.
-  ; If its garbage bag is full, or all the dirt is cleaned but it still has dirt in its bag, it will have the desire to empty its garbage bag.
-  ; If the vacuum does not have the desire to clean or empty its bin, its desire will become false.
+  ; If the vacuum still beliefs there are dirty spots somewhere, it will keep the desire to clean everything.
+  ; If it believes there are no more dirty spots, it will no longer have the desire to clean.
 
   ask vacuums [
-    ifelse dirt_in_bag < max_garbage and beliefs != [] [
+    ifelse beliefs != [] [
       set clean_all true
-      set empty_bag false
       set desire clean_all
     ]
-    [ ifelse dirt_in_bag = max_garbage or (beliefs = [] and dirt_in_bag > 0)[
-        set clean_all false
-        set empty_bag true
-        set desire empty_bag
-      ]
-      [
-        set clean_all false
-        set empty_bag false
-        set desire clean_all
-      ]
+    [
+      set clean_all false
+      set desire false
     ]
-    ]
+  ]
 end
 
 
@@ -217,30 +209,37 @@ to update-beliefs
  ask vacuums [
     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
     set beliefs dirt_locations
+    set move_to_dirt item 0 beliefs
   ]
 end
 
 ; --- Update intentions ---
 to update-intentions
-  ; If the vacuum has the desire to empty the bag and it isn't empty already, it will intent to go to the bin.
-  ; If the vacuum has the desire to clean all and it beliefs there are still dirty spots, it will intent to go to the first spot to clean.
-  ; If it does not have the desire to clean or empty the bin, it will not have any intentions anymore.
+  ; ----- comment toevoegen -----
   ask vacuums [
-    ifelse desire = empty_bag and dirt_in_bag > 0 [
-      set intention pos_bin
-      set int_x item 0 intention
-      set int_y item 1 intention
-      facexy int_x int_y
-    ][
-      ifelse desire = clean_all and beliefs != [] [
-        set intention item 0 beliefs
-        set int_x item 0 intention
-        set int_y item 1 intention
-        facexy int_x int_y
+    ifelse desire = clean_all [
+      ifelse dirt_in_bag < max_garbage [
+        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) != 0 [
+          set intention move_to_dirt
+          set int_x item 0 intention
+          set int_y item 1 intention
+          facexy int_x int_y
+        ][
+          set intention clean_dirt
+        ]
       ][
-      set intention []
-      ]
+        ifelse distance bin 0 != 0 [
+          set intention move_to_bin
+          set int_x item 0 intention
+          set int_y item 1 intention
+          facexy int_x int_y
+    ][
+      set intention empty_bag
     ]
+  ]
+][
+  set intention []
+]
   ]
 end
 
@@ -251,13 +250,13 @@ to execute-actions
   ; If the vacuum has the desire to clean it will try to clean the spot where its at if it is dirty.
   ; If the vacuum still has some intention to get somewhere, it will keep moving.
   ask vacuums [
-    if intention = empty_bag and distance bin 0 = 0 [
+    if intention = empty_bag[
       empty-bag-in-bin
     ]
-    if intention = clean_all and beliefs != [] [
+    if intention = clean_all[
       clean-dirt
     ]
-    if intention != [] [
+    if intention = move_to_dirt or intention = move_to_bin[
       move
     ]
   ]
