@@ -37,7 +37,8 @@
 ; 14) intention move_to_bin
 ; 15) intention move_to_dirt
 ; 16) intention empty_bag --> voeg comment toe extra intentie
-globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag]
+; 17) pos_bin
+globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin]
 
 
 ; --- Agents ---
@@ -69,6 +70,8 @@ to setup
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
   set move_to_bin []    ; comment
   set move_to_dirt []   ; comment
+  set empty_bag "empty_bag"
+  set clean_dirt "clean_dirt"
   setup-patches
   setup-vacuums
   setup-bins
@@ -93,6 +96,7 @@ to go
 
   ask vacuums [
     if beliefs = [] and desire = false and intention = [] [
+      print "everything is clean!"
       stop
     ]
   ]
@@ -204,22 +208,23 @@ to update-beliefs
        ]
      ]
    ]
+   ifelse dirt_locations != [] [
+     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
+     set beliefs dirt_locations
+     set move_to_dirt item 0 beliefs
+   ][
+     set beliefs dirt_locations
+   ]
  ]
-
- ask vacuums [
-    set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    set beliefs dirt_locations
-    set move_to_dirt item 0 beliefs
-  ]
 end
 
 ; --- Update intentions ---
 to update-intentions
   ; ----- comment toevoegen -----
   ask vacuums [
-    ifelse desire = clean_all [
+    ifelse desire = clean_all and beliefs != [] [
       ifelse dirt_in_bag < max_garbage [
-        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) != 0 [
+        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
           set intention move_to_dirt
           set int_x item 0 intention
           set int_y item 1 intention
@@ -228,18 +233,18 @@ to update-intentions
           set intention clean_dirt
         ]
       ][
-        ifelse distance bin 0 != 0 [
+        ifelse distancexy item 0 move_to_bin item 1 move_to_bin > 0.5 [
           set intention move_to_bin
           set int_x item 0 intention
           set int_y item 1 intention
           facexy int_x int_y
+        ][
+          set intention empty_bag
+        ]
+      ]
     ][
-      set intention empty_bag
+      set intention []
     ]
-  ]
-][
-  set intention []
-]
   ]
 end
 
@@ -253,7 +258,7 @@ to execute-actions
     if intention = empty_bag[
       empty-bag-in-bin
     ]
-    if intention = clean_all[
+    if intention = clean_dirt[
       clean-dirt
     ]
     if intention = move_to_dirt or intention = move_to_bin[
@@ -265,6 +270,7 @@ end
 to empty-bag-in-bin
   ask vacuums [
     set dirt_in_bag 0
+    print "bag was emptied"
   ]
 end
 
@@ -274,7 +280,6 @@ to clean-dirt
     set total_dirty total_dirty - 1
     set dirt_in_bag dirt_in_bag + 1
     print "cleaned dirt"
-    ;print dirt_in_bag
 
   ]
 end
@@ -286,13 +291,13 @@ to move
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-782
-17
-1382
-638
+719
+10
+1106
+418
 12
 12
-23.6
+15.1
 1
 10
 1
@@ -315,7 +320,7 @@ ticks
 SLIDER
 11
 49
-777
+705
 82
 dirt_pct
 dirt_pct
@@ -330,7 +335,7 @@ HORIZONTAL
 BUTTON
 11
 17
-395
+366
 50
 NIL
 go
@@ -345,9 +350,9 @@ NIL
 1
 
 BUTTON
-394
+364
 17
-777
+705
 50
 NIL
 go
@@ -362,10 +367,10 @@ NIL
 1
 
 MONITOR
-12
-115
-778
-160
+13
+116
+705
+161
 Number of dirty cells left.
 total_dirty
 17
@@ -375,7 +380,7 @@ total_dirty
 BUTTON
 11
 82
-777
+705
 115
 NIL
 setup
@@ -392,7 +397,7 @@ NIL
 MONITOR
 12
 160
-778
+705
 205
 The agent's current desire.
 [desire] of vacuum 0
@@ -403,7 +408,7 @@ The agent's current desire.
 MONITOR
 12
 205
-778
+705
 250
 The agent's current belief base.
 [beliefs] of vacuum 0
@@ -414,7 +419,7 @@ The agent's current belief base.
 MONITOR
 12
 295
-778
+705
 340
 Total simulation time.
 time
@@ -425,7 +430,7 @@ time
 MONITOR
 12
 250
-778
+705
 295
 The agent's current intention.
 [intention] of vacuum 0
@@ -435,9 +440,9 @@ The agent's current intention.
 
 SLIDER
 12
-338
-778
-371
+340
+705
+373
 max_garbage
 max_garbage
 0
@@ -447,6 +452,17 @@ max_garbage
 1
 NIL
 HORIZONTAL
+
+MONITOR
+11
+372
+705
+417
+Dirt in Bag
+[dirt_in_bag] of vacuum 0
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
