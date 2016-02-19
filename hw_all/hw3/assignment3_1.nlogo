@@ -150,6 +150,7 @@ to update-desires
     ]
     [
       set clean_all false
+      set desire false
     ]
   ]
 end
