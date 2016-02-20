@@ -93,12 +93,17 @@ to go
   ; If the vacuum does not believe there is anything left to clean and does not have the desire or intention to clean anymore, we can stop.
 
   execute-actions
-  if dirt_locations != [] [tick]
+  if battery_level > 0 and dirt_locations != [] [tick
+  ]
   set time ticks
 
   ask vacuums [
     if beliefs = [] and desire = false and intention = [] [
       print "everything is clean!"
+      stop
+    ]
+    if battery_level <= 0 [
+      print "out of battery!"
       stop
     ]
   ]
@@ -178,7 +183,7 @@ to update-desires
   ; If it believes there are no more dirty spots, it will no longer have the desire to clean.
 
   ask vacuums [
-    ifelse beliefs != [] and  battery_level != 0 [ ; battery level should not be 0
+    ifelse beliefs != [] and  battery_level > 0 [ ; battery level should not be 0
       set clean_to_max true
       set desire clean_to_max
     ]
@@ -224,24 +229,23 @@ end
 to update-intentions
   ; ----- comment toevoegen -----
   ask vacuums [
-    ifelse desire = clean_all and beliefs != [] [
-      ifelse dirt_in_bag < max_garbage [
+    ifelse desire = clean_to_max and beliefs != [] and battery_level > 0 [
+      ifelse dirt_in_bag < max_garbage [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt
         ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
           set intention move_to_dirt
           set int_x item 0 intention
           set int_y item 1 intention
           facexy int_x int_y
         ][
-          set intention clean_dirt
-        ]
+          set intention clean_dirt ] ; if it's at the spot with dirt and it's battery level is not low --> inention is to clean the dirt
       ][
         ifelse distancexy item 0 move_to_bin item 1 move_to_bin > 0.5 [
-          set intention move_to_bin
+          set intention move_to_bin ; if it's garbage bag is full but it's not at a bin yet --> move to bin
           set int_x item 0 intention
           set int_y item 1 intention
           facexy int_x int_y
         ][
-          set intention empty_bag
+          set intention empty_bag ; --> if it's garbage bag is full and it's at the bin --> empty the bag in the bin
         ]
       ]
     ][
@@ -257,13 +261,13 @@ to execute-actions
   ; If the vacuum has the desire to clean it will try to clean the spot where its at if it is dirty.
   ; If the vacuum still has some intention to get somewhere, it will keep moving.
   ask vacuums [
-    if intention = empty_bag[
+    if intention = empty_bag [
       empty-bag-in-bin
     ]
-    if intention = clean_dirt[
+    if intention = clean_dirt [
       clean-dirt
     ]
-    if intention = move_to_dirt or intention = move_to_bin[
+    if intention = move_to_dirt or intention = move_to_bin [
       move
     ]
   ]
@@ -476,11 +480,22 @@ max_battery
 max_battery
 0
 100
-10
+999996
 1
 1
 NIL
 HORIZONTAL
+
+MONITOR
+11
+447
+705
+500
+battery level of vacuum cleaner
+[battery_level] of vacuum 0
+17
+1
+13
 
 @#$#@#$#@
 ## WHAT IS IT?
