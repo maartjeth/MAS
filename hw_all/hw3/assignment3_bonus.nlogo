@@ -116,6 +116,9 @@ to setup-patches
   clear-patches
   ask patches [set pcolor white]
   ask n-of total_dirty patches with [pcolor = white] [set pcolor grey]
+  ask patches with [pcolor = grey] [
+    set plabel random dirt_value
+  ] ; sets the value of the dirt to a random number between 0 and the max dirt value
 end
 
 ; --- Setup bins ---
@@ -480,7 +483,7 @@ max_battery
 max_battery
 0
 100
-999996
+100
 1
 1
 NIL
@@ -496,6 +499,21 @@ battery level of vacuum cleaner
 17
 1
 13
+
+SLIDER
+10
+496
+705
+529
+dirt_value
+dirt_value
+0
+10
+4
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
