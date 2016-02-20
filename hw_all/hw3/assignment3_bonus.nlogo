@@ -38,7 +38,7 @@
 ; 15) intention move_to_dirt
 ; 16) intention empty_bag --> voeg comment toe extra intentie
 ; 17) pos_bin
-globals [total_dirty time x_end y_end clean_to_max dirt_locations coordinate int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin battery_level]
+globals [total_dirty time x_end y_end clean_to_max dirt_locations coord_label int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin battery_level]
 ; clean_to_max is added instead of clean_all, to express the idea that the desire of the agent is not to clean all dirt, but to clean as much as it can
 
 
@@ -157,13 +157,13 @@ to setup-beliefs
   ; for all patches, if grey, then add to belief list --> these need to be cleaned
   ask patches [
     if pcolor = grey [
-      set coordinate (list pxcor pycor)                   ; first create a list, coordinate, which stores the coordinates of the patch
-      set dirt_locations lput coordinate dirt_locations   ; place this coordinate list into the list which stores all the coordinates
+      set coord_label (list pxcor pycor plabel)           ; first create a list, coord_label, which stores the coordinates of the patch and the dirt value of the label
+      set dirt_locations lput coord_label dirt_locations  ; place this coordinate list into the list which stores all the coordinates
     ]
   ]
 
   ask vacuums [
-    set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
+    set dirt_locations sort-by [ ( (item 2 ?1) - (distancexy item 0 ?1 item 1 ?1) > (item 2 ?2) - (distancexy item 0 ?2 item 1 ?2) ) ] dirt_locations ; optimal strategy: go to spot with high dirt value that is nearby
     set beliefs dirt_locations
     set move_to_dirt item 0 beliefs
   ]
@@ -219,7 +219,7 @@ to update-beliefs
      ]
    ]
    ifelse dirt_locations != [] [
-     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
+     set dirt_locations sort-by [ ( (item 2 ?1) - (distancexy item 0 ?1 item 1 ?1) > (item 2 ?2) - (distancexy item 0 ?2 item 1 ?2) ) ] dirt_locations ; optimal strategy: go to spot with high dirt value that is nearby
      set beliefs dirt_locations
      set move_to_dirt item 0 beliefs
    ][
