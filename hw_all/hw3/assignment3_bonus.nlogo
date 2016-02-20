@@ -287,7 +287,7 @@ to clean-dirt
   if pcolor = grey [
     set pcolor white
     set total_dirty total_dirty - 1
-    set dirt_in_bag dirt_in_bag + 1
+    set dirt_in_bag dirt_in_bag + plabel
     print "cleaned dirt"
 
   ]
