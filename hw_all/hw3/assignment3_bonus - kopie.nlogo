@@ -167,10 +167,7 @@ to setup-beliefs
   ask vacuums [
     set dirt_locations sort-by [ ( (item 2 ?1) - (distancexy item 0 ?1 item 1 ?1) > (item 2 ?2) - (distancexy item 0 ?2 item 1 ?2) ) ] dirt_locations ; optimal strategy: go to spot with high dirt value that is nearby
     set beliefs dirt_locations
-    print "before check loc"
     check-loc-dirt
-    print "loc in reach"
-    print loc_in_reach
     set move_to_dirt item 0 loc_in_reach
   ]
 end
@@ -233,25 +230,18 @@ to update-intentions
     ifelse desire = clean_to_max and beliefs != [] and battery_level > 0 [
       ifelse dirt_in_bag < max_garbage and loc_in_reach != [] [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt
         ifelse distancexy (item 0 item 0 loc_in_reach) (item 1 item 0 loc_in_reach) > 0.5 [
-          print "DISTANCE"
-          print  distancexy (item 0 item 0 loc_in_reach) (item 1 item 0 loc_in_reach)
           set intention move_to_dirt
-          print "intention:"
           set int_x item 0 intention
-          print int_x
           set int_y item 1 intention
-          print int_y
           facexy int_x int_y
-          print "changed facing direction to new dirt"
         ][
-          set intention clean_dirt ] ; if it's at the spot with dirt and it's battery level is not low --> inention is to clean the dirt
+          set intention clean_dirt ] ; if it's at the spot with dirt and it's battery level is not low --> intention is to clean the dirt
       ][
         ifelse distancexy item 0 move_to_bin item 1 move_to_bin > 0.5 [
           set intention move_to_bin ; if it's garbage bag is full but it's not at a bin yet --> move to bin
           set int_x item 0 intention
           set int_y item 1 intention
           facexy int_x int_y
-          print "changed facing direction to bin"
         ][
           set intention empty_bag ; --> if it's garbage bag is full and it's at the bin --> empty the bag in the bin
         ]
@@ -360,7 +350,7 @@ dirt_pct
 dirt_pct
 0
 100
-4
+5
 1
 1
 NIL
@@ -506,8 +496,8 @@ SLIDER
 max_battery
 max_battery
 0
-10000
-1132
+100
+86
 1
 1
 NIL

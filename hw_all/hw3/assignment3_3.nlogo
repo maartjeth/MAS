@@ -223,23 +223,23 @@ to update-intentions
   ; Here the intention of the vacuum is updated.
   ask vacuums [
     ifelse desire = clean_all and beliefs != [] [
-      ifelse dirt_in_bag < max_garbage [
+      ifelse dirt_in_bag < max_garbage [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt
         ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
           set intention move_to_dirt
           set int_x item 0 intention
           set int_y item 1 intention
           facexy int_x int_y
         ][
-          set intention clean_dirt
-        ]
+          set intention clean_dirt ; if it's at the spot with dirt and it's battery level is not low --> inention is to clean the dirt
+      ]
       ][
         ifelse distancexy item 0 move_to_bin item 1 move_to_bin > 0.5 [
-          set intention move_to_bin
+          set intention move_to_bin  ; if it's garbage bag is full but it's not at a bin yet --> move to bin
           set int_x item 0 intention
           set int_y item 1 intention
           facexy int_x int_y
         ][
-          set intention empty_bag
+          set intention empty_bag ; --> if it's garbage bag is full and it's at the bin --> empty the bag in the bin
         ]
       ]
     ][

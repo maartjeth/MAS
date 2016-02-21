@@ -237,8 +237,6 @@ end
 to sort-list
   ask vacuums [
     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-    ;print "dirt locations" ; debug line
-    ;print dirt_locations ; debug line
   ]
 end
 @#$#@#$#@
