@@ -38,7 +38,8 @@
 ; 15) intention move_to_dirt
 ; 16) intention empty_bag --> we have created a fourth intention because if we have move to dirt and clean dirt, we also liked to have a move to bin and an empty bag
 ; 17) pos_bin
-globals [total_dirty time x_end y_end clean_to_max dirt_locations coord_label int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin battery_level]
+; 18) stop_simulation
+globals [total_dirty time x_end y_end clean_to_max dirt_locations coord_label int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin battery_level loc_in_reach i stop_simulation]
 ; clean_to_max is added instead of clean_all, to express the idea that the desire of the agent is not to clean all dirt, but to clean as much as it can
 
 
@@ -71,9 +72,11 @@ to setup
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
   set move_to_bin []    ; create an empty list which stores the coordinates of the bin
   set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
+  set loc_in_reach []
   set empty_bag "empty_bag"
   set clean_dirt "clean_dirt"
   set battery_level max_battery
+  set stop_simulation false
   setup-patches
   setup-vacuums
   setup-bins
@@ -101,12 +104,16 @@ to go
   ask vacuums [
     if beliefs = [] and desire = false and intention = [] [
       output-print "everything is clean!"
-      stop
+      set stop_simulation true
     ]
     if battery_level <= 0 [
       output-print "out of battery!"
-      stop
+      set stop_simulation true
     ]
+  ]
+
+  if stop_simulation = true [
+    stop
   ]
 end
 
@@ -118,7 +125,7 @@ to setup-patches
   ask patches [set pcolor white]
   ask n-of total_dirty patches with [pcolor = white] [set pcolor grey]
   ask patches with [pcolor = grey] [
-    set plabel 1 + random (dirt_value - 1 )
+    set plabel 1 + random dirt_value
   ] ; sets the value of the dirt to a random number between 1 and the max dirt value
 end
 
@@ -130,6 +137,7 @@ to setup-bins
     setxy random-xcor random-ycor
     set shape "house"
     set color blue
+    move-to one-of patches with [pcolor != grey]
     set move_to_bin list xcor ycor
   ]
 end
@@ -166,10 +174,10 @@ to setup-beliefs
   ask vacuums [
     set dirt_locations sort-by [ ( (item 2 ?1) - (distancexy item 0 ?1 item 1 ?1) > (item 2 ?2) - (distancexy item 0 ?2 item 1 ?2) ) ] dirt_locations ; optimal strategy: go to spot with high dirt value that is nearby
     set beliefs dirt_locations
-    set move_to_dirt item 0 beliefs
+    check-loc-dirt
+    set move_to_dirt item 0 loc_in_reach
   ]
 end
-
 
 ; --- Setup desires ---
 to setup-desires
@@ -209,20 +217,13 @@ to update-beliefs
  ; When the vacuum believes there is no more dirt, it's belief will have an empty list, since there is only one belief: the locations of the dirt.
 
  ask vacuums [
-   if beliefs != [] [
-     let check_beliefs item 0 beliefs
-     set check_int_x item 0 check_beliefs
-     set check_int_y item 1 check_beliefs
-     ask patch check_int_x check_int_y [
-       if pcolor = white [
-         set dirt_locations remove-item 0 dirt_locations
-       ]
-     ]
-   ]
    ifelse dirt_locations != [] [
      set dirt_locations sort-by [ ( (item 2 ?1) - (distancexy item 0 ?1 item 1 ?1) > (item 2 ?2) - (distancexy item 0 ?2 item 1 ?2) ) ] dirt_locations ; optimal strategy: go to spot with high dirt value that is nearby
      set beliefs dirt_locations
-     set move_to_dirt item 0 beliefs
+     check-loc-dirt
+     if loc_in_reach != [] [
+       set move_to_dirt item 0 loc_in_reach
+     ]
    ][
      set beliefs dirt_locations
    ]
@@ -234,14 +235,14 @@ to update-intentions
   ; Here the intention of the vacuum is updated.
   ask vacuums [
     ifelse desire = clean_to_max and beliefs != [] and battery_level > 0 [
-      ifelse dirt_in_bag < max_garbage [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt
-        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
+      ifelse dirt_in_bag < max_garbage and loc_in_reach != [] [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt
+        ifelse distancexy (item 0 item 0 loc_in_reach) (item 1 item 0 loc_in_reach) > 0.5 [
           set intention move_to_dirt
           set int_x item 0 intention
           set int_y item 1 intention
           facexy int_x int_y
         ][
-          set intention clean_dirt ] ; if it's at the spot with dirt and it's battery level is not low --> inention is to clean the dirt
+          set intention clean_dirt ] ; if it's at the spot with dirt and it's battery level is not low --> intention is to clean the dirt
       ][
         ifelse distancexy item 0 move_to_bin item 1 move_to_bin > 0.5 [
           set intention move_to_bin ; if it's garbage bag is full but it's not at a bin yet --> move to bin
@@ -277,6 +278,16 @@ to execute-actions
   ]
 end
 
+; --- check whether location is in reach: bag is not too full to add this amount of dirt
+to check-loc-dirt
+  set loc_in_reach []
+  foreach beliefs [
+    if item 2 ? + dirt_in_bag <= max_garbage [
+      set loc_in_reach lput ? loc_in_reach ; put all reachable locations in a new list
+    ]
+  ]
+end
+
 to empty-bag-in-bin
   ask vacuums [
     set dirt_in_bag 0
@@ -291,6 +302,15 @@ to clean-dirt
     set dirt_in_bag dirt_in_bag + plabel
     output-print "cleaned dirt"
 
+    if beliefs != [] [
+      set i 0
+      foreach beliefs [
+        if item 0 ? = pxcor and item 1 ? = pycor [
+          set dirt_locations remove-item i dirt_locations
+        ]
+        set i i + 1
+      ]
+    ]
   ]
 end
 
@@ -337,7 +357,7 @@ dirt_pct
 dirt_pct
 0
 100
-2
+5
 1
 1
 NIL
@@ -484,7 +504,7 @@ max_battery
 max_battery
 0
 100
-100
+50
 1
 1
 NIL
@@ -510,7 +530,7 @@ dirt_value
 dirt_value
 0
 10
-4
+3
 1
 1
 NIL
@@ -518,10 +538,10 @@ HORIZONTAL
 
 OUTPUT
 719
-446
-959
-471
-11
+430
+950
+457
+13
 
 @#$#@#$#@
 ## WHAT IS IT?

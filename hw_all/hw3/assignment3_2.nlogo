@@ -33,7 +33,8 @@
 ; 10) int_y
 ; 11) check_int_x
 ; 12) check_int_y
-globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y]
+; 13) stop_simulation
+globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y stop_simulation]
 
 
 ; --- Agents ---
@@ -62,6 +63,7 @@ to setup
   set total_dirty floor(count patches * dirt_pct / 100)
   set clean_all true    ; create the desire for the vacuum to clean or not
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
+  set stop_simulation false
   setup-patches
   setup-vacuums
   setup-ticks
@@ -85,8 +87,12 @@ to go
 
   ask vacuums [
     if beliefs = [] and desire = false and intention = [] [
-      stop
+      set stop_simulation true
     ]
+  ]
+
+  if stop_simulation = true [
+    stop
   ]
 end
 

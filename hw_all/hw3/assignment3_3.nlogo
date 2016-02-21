@@ -38,7 +38,8 @@
 ; 15) intention move_to_dirt
 ; 16) intention empty_bag --> we have created a fourth intention because if we have move to dirt and clean dirt, we also liked to have a move to bin and an empty bag
 ; 17) pos_bin
-globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin]
+; 18) stop_simulation
+globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin stop_simulation]
 
 
 ; --- Agents ---
@@ -72,6 +73,7 @@ to setup
   set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
   set empty_bag "empty_bag"
   set clean_dirt "clean_dirt"
+  set stop_simulation false
   setup-patches
   setup-vacuums
   setup-bins
@@ -96,9 +98,13 @@ to go
 
   ask vacuums [
     if beliefs = [] and desire = false and intention = [] [
-      print "everything is clean!"
-      stop
+      output-print "everything is clean!"
+      set stop_simulation true
     ]
+  ]
+
+  if stop_simulation = true [
+    stop
   ]
 end
 
@@ -119,6 +125,7 @@ to setup-bins
     setxy random-xcor random-ycor
     set shape "house"
     set color blue
+    move-to one-of patches with [pcolor != grey]
     set move_to_bin list xcor ycor
   ]
 end
@@ -270,7 +277,7 @@ end
 to empty-bag-in-bin
   ask vacuums [
     set dirt_in_bag 0
-    print "bag was emptied"
+    output-print "bag was emptied"
   ]
 end
 
@@ -279,7 +286,7 @@ to clean-dirt
     set pcolor white
     set total_dirty total_dirty - 1
     set dirt_in_bag dirt_in_bag + 1
-    print "cleaned dirt"
+    output-print "cleaned dirt"
 
   ]
 end
@@ -462,6 +469,13 @@ Dirt in Bag
 [dirt_in_bag] of vacuum 0
 17
 1
+11
+
+OUTPUT
+718
+431
+958
+459
 11
 
 @#$#@#$#@
