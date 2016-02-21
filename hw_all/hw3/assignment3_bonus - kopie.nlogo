@@ -233,6 +233,8 @@ to update-intentions
     ifelse desire = clean_to_max and beliefs != [] and battery_level > 0 [
       ifelse dirt_in_bag < max_garbage and loc_in_reach != [] [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt
         ifelse distancexy (item 0 item 0 loc_in_reach) (item 1 item 0 loc_in_reach) > 0.5 [
+          print "DISTANCE"
+          print  distancexy (item 0 item 0 loc_in_reach) (item 1 item 0 loc_in_reach)
           set intention move_to_dirt
           print "intention:"
           set int_x item 0 intention
@@ -358,7 +360,7 @@ dirt_pct
 dirt_pct
 0
 100
-3
+4
 1
 1
 NIL
@@ -505,7 +507,7 @@ max_battery
 max_battery
 0
 10000
-10000
+1132
 1
 1
 NIL
@@ -536,6 +538,13 @@ dirt_value
 1
 NIL
 HORIZONTAL
+
+OUTPUT
+719
+430
+950
+457
+13
 
 @#$#@#$#@
 ## WHAT IS IT?
