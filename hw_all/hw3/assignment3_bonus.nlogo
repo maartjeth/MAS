@@ -100,11 +100,11 @@ to go
 
   ask vacuums [
     if beliefs = [] and desire = false and intention = [] [
-      print "everything is clean!"
+      output-print "everything is clean!"
       stop
     ]
     if battery_level <= 0 [
-      print "out of battery!"
+      output-print "out of battery!"
       stop
     ]
   ]
@@ -280,7 +280,7 @@ end
 to empty-bag-in-bin
   ask vacuums [
     set dirt_in_bag 0
-    print "bag was emptied"
+    output-print "bag was emptied"
   ]
 end
 
@@ -289,7 +289,7 @@ to clean-dirt
     set pcolor white
     set total_dirty total_dirty - 1
     set dirt_in_bag dirt_in_bag + plabel
-    print "cleaned dirt"
+    output-print "cleaned dirt"
 
   ]
 end
@@ -515,6 +515,13 @@ dirt_value
 1
 NIL
 HORIZONTAL
+
+OUTPUT
+719
+446
+959
+471
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
