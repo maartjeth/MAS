@@ -1,4 +1,4 @@
-; Assignment 3, part 3
+; Assignment 3, bonus part
 ; Contributors Group 1:
 ; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
@@ -36,7 +36,7 @@
 ; 13) intention clean_dirt
 ; 14) intention move_to_bin
 ; 15) intention move_to_dirt
-; 16) intention empty_bag --> voeg comment toe extra intentie
+; 16) intention empty_bag --> we have created a fourth intention because if we have move to dirt and clean dirt, we also liked to have a move to bin and an empty bag
 ; 17) pos_bin
 globals [total_dirty time x_end y_end clean_to_max dirt_locations coord_label int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin battery_level]
 ; clean_to_max is added instead of clean_all, to express the idea that the desire of the agent is not to clean all dirt, but to clean as much as it can
@@ -69,8 +69,8 @@ to setup
   set total_dirty floor(count patches * dirt_pct / 100)
   set clean_to_max true    ; create the desire for the vacuum to clean or not
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
-  set move_to_bin []    ; comment
-  set move_to_dirt []   ; comment
+  set move_to_bin []    ; create an empty list which stores the coordinates of the bin
+  set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
   set empty_bag "empty_bag"
   set clean_dirt "clean_dirt"
   set battery_level max_battery
@@ -91,6 +91,7 @@ to go
   update-desires
   update-intentions
   ; If the vacuum does not believe there is anything left to clean and does not have the desire or intention to clean anymore, we can stop.
+  ; But, if the battery of the vacuum is 0, we also stop.
 
   execute-actions
   if battery_level > 0 and dirt_locations != [] [tick
@@ -117,8 +118,8 @@ to setup-patches
   ask patches [set pcolor white]
   ask n-of total_dirty patches with [pcolor = white] [set pcolor grey]
   ask patches with [pcolor = grey] [
-    set plabel random dirt_value
-  ] ; sets the value of the dirt to a random number between 0 and the max dirt value
+    set plabel 1 + random (dirt_value - 1 )
+  ] ; sets the value of the dirt to a random number between 1 and the max dirt value
 end
 
 ; --- Setup bins ---
@@ -230,7 +231,7 @@ end
 
 ; --- Update intentions ---
 to update-intentions
-  ; ----- comment toevoegen -----
+  ; Here the intention of the vacuum is updated.
   ask vacuums [
     ifelse desire = clean_to_max and beliefs != [] and battery_level > 0 [
       ifelse dirt_in_bag < max_garbage [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt

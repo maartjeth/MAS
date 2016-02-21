@@ -36,7 +36,7 @@
 ; 13) intention clean_dirt
 ; 14) intention move_to_bin
 ; 15) intention move_to_dirt
-; 16) intention empty_bag --> voeg comment toe extra intentie
+; 16) intention empty_bag --> we have created a fourth intention because if we have move to dirt and clean dirt, we also liked to have a move to bin and an empty bag
 ; 17) pos_bin
 globals [total_dirty time x_end y_end clean_all dirt_locations coordinate int_x int_y check_int_x check_int_y clean_dirt move_to_bin move_to_dirt empty_bag pos_bin]
 
@@ -68,8 +68,8 @@ to setup
   set total_dirty floor(count patches * dirt_pct / 100)
   set clean_all true    ; create the desire for the vacuum to clean or not
   set dirt_locations [] ; create an empty list which stores all the dirt locations (the beliefs)
-  set move_to_bin []    ; comment
-  set move_to_dirt []   ; comment
+  set move_to_bin []    ; create an empty list which stores the coordinates of the bin
+  set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
   set empty_bag "empty_bag"
   set clean_dirt "clean_dirt"
   setup-patches
@@ -220,7 +220,7 @@ end
 
 ; --- Update intentions ---
 to update-intentions
-  ; ----- comment toevoegen -----
+  ; Here the intention of the vacuum is updated.
   ask vacuums [
     ifelse desire = clean_all and beliefs != [] [
       ifelse dirt_in_bag < max_garbage [
