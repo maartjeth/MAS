@@ -213,16 +213,6 @@ to update-beliefs
  ; When the vacuum believes there is no more dirt, it's belief will have an empty list, since there is only one belief: the locations of the dirt.
 
  ask vacuums [
-   ;if beliefs != [] [
-   ;  let check_beliefs item 0 beliefs
-   ;  set check_int_x item 0 check_beliefs
-   ;  set check_int_y item 1 check_beliefs
-   ;  ask patch check_int_x check_int_y [
-   ;    if pcolor = white [
-   ;      set dirt_locations remove-item 0 dirt_locations
-   ;    ]
-   ;  ]
-   ;]
    ifelse dirt_locations != [] [
      set dirt_locations sort-by [ ( (item 2 ?1) - (distancexy item 0 ?1 item 1 ?1) > (item 2 ?2) - (distancexy item 0 ?2 item 1 ?2) ) ] dirt_locations ; optimal strategy: go to spot with high dirt value that is nearby
      set beliefs dirt_locations
@@ -242,7 +232,7 @@ to update-intentions
   ask vacuums [
     ifelse desire = clean_to_max and beliefs != [] and battery_level > 0 [
       ifelse dirt_in_bag < max_garbage and loc_in_reach != [] [ ; if it's garbage bag is not full yet and it's not at the first one of the belief list and it still has battery --> intention is move to dirt
-        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
+        ifelse distancexy (item 0 item 0 loc_in_reach) (item 1 item 0 loc_in_reach) > 0.5 [
           set intention move_to_dirt
           print "intention:"
           set int_x item 0 intention
@@ -284,7 +274,6 @@ to execute-actions
       clean-dirt
     ]
     if intention = move_to_dirt or intention = move_to_bin [
-      print "move"
       move
     ]
   ]
@@ -298,8 +287,6 @@ to check-loc-dirt
       set loc_in_reach lput ? loc_in_reach ; put all reachable locations in a new list
     ]
   ]
-  print "LOC IN REACH"
-  print loc_in_reach
 end
 
 to empty-bag-in-bin
@@ -325,8 +312,6 @@ to clean-dirt
         set i i + 1
       ]
     ]
-    print "dirt locations"
-    print dirt_locations
   ]
 end
 
