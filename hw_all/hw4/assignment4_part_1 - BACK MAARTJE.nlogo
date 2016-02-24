@@ -26,7 +26,7 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
-globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin coordinate all_sensors turtle_patches nr_sensors instance sensor_list x y i]
+globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
@@ -55,8 +55,6 @@ to setup
   set time 0
   set x_end max-pxcor
   set y_end max-pycor
-  set all_sensors []
-  set turtle_patches []
   set turtle_list n-values num_agents [?]
   set colours [red orange yellow green blue violet pink]
 
@@ -69,7 +67,6 @@ to setup
 
   setup-patches
   setup-vacuums
-  ;setup-sensors
   setup-ticks
   setup-beliefs
   setup-desires
@@ -121,7 +118,7 @@ to setup-vacuums
 
     ask sensor (? + num_agents) [
       set shape "circle"
-      set size vision_radius
+      set size vision_radius * 2
       let colour [color] of vacuum ?
       set color lput 100 extract-rgb colour
       setxy [xcor] of vacuum ? [ycor] of vacuum ?
@@ -129,8 +126,6 @@ to setup-vacuums
     ]
   ]
 end
-
-
 
 
 ; --- Setup ticks ---
@@ -203,8 +198,21 @@ to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving, cleaning, and (actively) looking around.
   ; Please note that your agents should perform only one action per tick!
 
+  ask vacuums [
+    let clean_color own_color ; for some reason I couldn't do this in once
 
+    if intention = observe_environment [
+      ask patches in-radius vision_radius [
+        if pcolor = clean_color [
+          set pcolor black
 
+          ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+            set beliefs lput (list pxcor pycor) beliefs
+          ]
+        ]
+      ]
+    ]
+  ]
 end
 
 
