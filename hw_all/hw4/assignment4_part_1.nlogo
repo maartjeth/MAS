@@ -26,14 +26,14 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
-globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin]
+globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin coordinate all_sensors turtle_patches]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
 ;
 ; 1) vacuums: vacuum cleaner agents.
 breed [vacuums vacuum]
-
+breed [sensors sensor] ;these are the patches in radius of the vacuums
 
 ; --- Local variables ---
 ; The following local variables are given.
@@ -51,6 +51,8 @@ to setup
   set time 0
   set x_end max-pxcor
   set y_end max-pycor
+  set all_sensors []
+  set turtle_patches []
   set turtle_list n-values num_agents [?]
   set colours [red orange yellow green blue violet pink]
 
@@ -103,13 +105,36 @@ to setup-vacuums
   create-vacuums num_agents
 
   foreach turtle_list [
+    print "new turtle"
     ask vacuum ? [
       set color item ? colours
       setxy random-xcor random-ycor
       facexy random-xcor random-ycor
-      ask patches in-radius (vision_radius / 2) [ set pcolor brown ]
+
+      set coordinate (list xcor ycor)
+      set turtle_patches lput coordinate turtle_patches
+
+      ask patches in-radius floor(vision_radius / 2) [
+        set coordinate (list pxcor pycor)
+        set turtle_patches lput coordinate turtle_patches
+      ]
+
+      set all_sensors lput turtle_patches all_sensors
+
     ]
+
   ]
+
+  print all_sensors
+
+  ask vacuum 2 [
+     create-link-to turtle 3
+  ]
+
+  ask links [
+     set color blue
+  ]
+  ;print all_sensors
 end
 
 
@@ -307,7 +332,7 @@ vision_radius
 vision_radius
 0
 100
-3
+4
 1
 1
 NIL
