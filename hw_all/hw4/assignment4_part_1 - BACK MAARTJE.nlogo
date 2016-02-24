@@ -32,8 +32,9 @@ globals [total_dirty time x_end y_end clean_all turtle_list colours move_around 
 ; The following types of agent (called 'breeds' in NetLogo) are given.
 ;
 ; 1) vacuums: vacuum cleaner agents.
-breed [vacuums vacuum]
 breed [sensors sensor]
+breed [vacuums vacuum]
+
 
  ;these are the patches in radius of the vacuums
 
@@ -68,7 +69,7 @@ to setup
 
   setup-patches
   setup-vacuums
-  setup-sensors
+  ;setup-sensors
   setup-ticks
   setup-beliefs
   setup-desires
@@ -109,103 +110,25 @@ to setup-vacuums
   ; In this method you may create the vacuum cleaner agents.
 
   create-vacuums num_agents
+  create-sensors num_agents
 
   foreach turtle_list [
-    ;print "new turtle"
     ask vacuum ? [
       set color item ? colours
       setxy random-xcor random-ycor
       facexy random-xcor random-ycor
-
-      set coordinate (list xcor ycor)
-      set turtle_patches []
-      set turtle_patches lput coordinate turtle_patches
-
-
-      ask patches in-radius floor(vision_radius / 2) [
-        set coordinate (list pxcor pycor)
-        set turtle_patches lput coordinate turtle_patches
-        ;print "turtle patches"
-        ;print turtle_patches
-      ]
-      set all_sensors lput turtle_patches all_sensors
-    ]
-  ]
-
-  print "all sensors"
-  print all_sensors
-
-  ;ask vacuum 2 [
-  ;   create-link-to turtle 3
-  ;]
-
-  ;ask links [
-  ;   set color blue
-  ;]
-  ;print all_sensors
-
-end
-
-to setup-sensors
-  foreach all_sensors [
-    let vacuum-cleaner item 0 ?
-    set instance but-first ? ; first element of the list is vacuum cleaner
-
-    set nr_sensors 0
-    foreach instance [
-      create-sensors 1
-      set nr_sensors nr_sensors + 1
     ]
 
-    set sensor_list n-values nr_sensors [?]
-
-    foreach sensor_list [
-      let coordinates item ? instance
-      ask sensor (? + num_agents) [
-         set x item 0 coordinates
-         set y item 1 coordinates
-         setxy x y
-         set shape "circle"
-      ]
+    ask sensor (? + num_agents) [
+      set shape "wheel"
+      set size vision_radius
+      set color (grey + 2.5)
+      setxy [xcor] of vacuum ? [ycor] of vacuum ?
+      create-link-with vacuum ?
     ]
   ]
 end
 
-
-
-  ;foreach all_sensors [
-  ;  set instance but-first ?
-
-
-    ;let vacuum_cleaner item 0 instance ; this is the position of the turtle (x-y)
-    ;print "instance"
-    ;print instance
-
-    ;set nr_sensors 0
-    ;foreach instance [
-    ;  create-sensors 1
-    ;  set nr_sensors nr_sensors + 1
-    ;]
-
-    ;set sensor_list n-values nr_sensors [?]
-
-    ;foreach sensor_list [
-    ;  let coordinates item ? instance
-    ;  ask sensor ? [
-    ;    let x item 0 ?
-    ;    let y item 1 ?
-    ;    setxy x y
-    ;  ]
-
-
-      ;ask sensor ? [
-      ;  print color
-        ;let x item 0 ?
-        ;let y item 1 ?
-        ;setxy x y
-      ;]
-    ;]
-  ;]
 
 
 
