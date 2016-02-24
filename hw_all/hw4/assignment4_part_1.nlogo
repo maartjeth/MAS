@@ -90,7 +90,7 @@ to setup-vacuums
 
     setxy random-xcor random-ycor
     facexy random-xcor random-ycor
-    ; move-to one-of patches with [not any? patches in-radius vision_radius]
+    ask patches in-radius (vision_radius / 2) [ set pcolor blue ]
   ]
 
 end
@@ -261,7 +261,7 @@ vision_radius
 vision_radius
 0
 100
-6
+4
 1
 1
 NIL
