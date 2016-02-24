@@ -26,7 +26,7 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
-globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin]
+globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin int_x int_y check_int_x check_int_y clean_dirt]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
@@ -63,6 +63,7 @@ to setup
   ; intentions
   set move_around "move_around"
   set observe_environment "observe_environment"
+  set clean_dirt "clean_dirt"
   set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
 
   setup-patches
@@ -170,6 +171,23 @@ end
 to update-beliefs
  ; You should update your agent's beliefs here.
  ; Please remember that you should use this method whenever your agents changes its position.
+
+ ask vacuums [
+   ifelse beliefs != [] [
+     ;let check_beliefs item 0 beliefs
+     ;set check_int_x item 0 check_beliefs
+     ;set check_int_y item 1 check_beliefs
+     ;ask patch check_int_x check_int_y [
+     ;  if pcolor = white [
+     ;    set beliefs remove-item 0 beliefs
+     ;  ]
+     ;]
+
+     sort-beliefs
+     set move_to_dirt item 0 beliefs
+   ]
+   [ set beliefs [] ]
+ ]
 end
 
 
@@ -177,18 +195,28 @@ end
 to update-intentions
   ; You should update your agent's intentions here.
   ask vacuums [
-    if beliefs = [] [
-      ifelse intention = observe_environment [
-        set intention move_around
+    ifelse desire = clean_all [
+
+      if beliefs = [] [
+        ifelse intention = observe_environment [
+          set intention move_around
+        ]
+        [ set intention observe_environment ]
       ]
-      [ set intention observe_environment ]
-    ]
-    if beliefs != [] [
-      ifelse intention = observe_environment [
-        set intention move_to_dirt
+
+      if beliefs != [] [
+        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
+          ;if intention = observe_environment [
+          set intention move_to_dirt
+          set int_x item 0 intention
+          set int_y item 1 intention
+          facexy int_x int_y
+          ;]
+        ]
+        [ set intention clean_dirt ]
       ]
-      [ set intention observe_environment ]
     ]
+    [ set intention [] ]
   ]
 end
 
@@ -211,19 +239,47 @@ to execute-actions
 
           ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
             set beliefs lput (list x y) beliefs
-            sort-beliefs
           ]
         ]
       ]
     ]
 
-    ;if intention = move_to_dirt
+    if intention = clean_dirt [
+       clean-dirt
+    ]
+
+    if intention = move_to_dirt [
+      move
+    ]
   ]
 end
 
 to sort-beliefs
   ask vacuums [
      set beliefs sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] beliefs
+  ]
+end
+
+to move
+  ; move the vacuum itself
+  if xcor != int_x and ycor != int_y [
+    forward 1
+  ]
+
+  ; move its sensor space
+  foreach turtle_list [
+    ask sensor (? + num_agents) [
+      setxy [xcor] of vacuum ? [ycor] of vacuum ?
+    ]
+  ]
+
+end
+
+to clean-dirt
+  if pcolor != white [
+    set pcolor white
+    set total_dirty total_dirty - 1
+    output-print "cleaned dirt"
   ]
 end
 
