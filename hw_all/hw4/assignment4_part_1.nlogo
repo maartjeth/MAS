@@ -26,7 +26,7 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
-globals [total_dirty time x_end y_end clean_all turtle_list colours]
+globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
@@ -53,11 +53,18 @@ to setup
   set y_end max-pycor
   set turtle_list n-values num_agents [?]
   set colours [red orange yellow green blue violet pink]
+
+  ; intentions
+  set move_around "move_around"
+  set observe_environment "observe_environment"
+  set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
+
   setup-patches
   setup-vacuums
   setup-ticks
   setup-beliefs
   setup-desires
+  setup-intentions
 end
 
 
@@ -114,12 +121,21 @@ end
 
 ; --- Setup beliefs ---
 to setup-beliefs
-
+  ask vacuums [
+    set beliefs []
+  ]
 end
 
 ; --- Setup desires ---
 to setup-desires
 
+end
+
+; --- Setup intentions ---
+to setup-intentions
+  ask vacuums [
+     set intention move_around
+  ]
 end
 
 
@@ -140,6 +156,19 @@ end
 ; --- Update intentions ---
 to update-intentions
   ; You should update your agent's intentions here.
+  ask vacuums [
+    if beliefs = [] [
+      ifelse intention = observe_environment [
+        set intention move_around
+      ]
+      [ set intention observe_environment ]
+    ]
+    if beliefs != [] [
+      ifelse intention = observe_environment [
+        set intention move_to_dirt
+      ]
+      [ set intention observe_environment ]
+  ]
 end
 
 
@@ -147,6 +176,9 @@ end
 to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving, cleaning, and (actively) looking around.
   ; Please note that your agents should perform only one action per tick!
+
+
+
 end
 
 
