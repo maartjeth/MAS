@@ -210,12 +210,13 @@ to update-intentions
 
       if beliefs != [] [
         ifelse distancexy (item 0 item 0 dirt_locations) (item 1 item 0 beliefs) > 0.5 [
-          ;if intention = observe_environment [
-          set intention move_to_dirt
-          set int_x item 0 intention
-          set int_y item 1 intention
-          facexy int_x int_y
-          ;]
+          ifelse intention = move_to_dirt [
+            set intention observe_environment ]  ; you need to do this to make sure it's checking out its environment as well while running aorund
+          [ set intention move_to_dirt
+            set int_x item 0 intention
+            set int_y item 1 intention
+            facexy int_x int_y
+          ]
         ]
         [ set intention clean_dirt ]
       ]
@@ -255,6 +256,10 @@ to execute-actions
 
     if intention = move_to_dirt [
       move
+    ]
+
+    if intention = move_around [
+     ;;; implement here the random move to the wall
     ]
   ]
 end
