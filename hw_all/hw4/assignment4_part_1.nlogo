@@ -26,7 +26,7 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
-globals [total_dirty time x_end y_end clean_all]
+globals [total_dirty time x_end y_end clean_all turtle_list colours]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
@@ -51,6 +51,8 @@ to setup
   set time 0
   set x_end max-pxcor
   set y_end max-pycor
+  set turtle_list n-values num_agents [?]
+  set colours [red orange yellow green blue violet pink]
   setup-patches
   setup-vacuums
   setup-ticks
@@ -77,22 +79,30 @@ to setup-patches
   clear-patches
   set total_dirty floor(count patches * dirt_pct / 100)
   ask patches [set pcolor white]
-  ask n-of total_dirty patches with [pcolor = white] [set pcolor red]
+
+  let total_dirt_vacuum floor(total_dirty / num_agents)
+
+  foreach turtle_list [
+     ask n-of total_dirt_vacuum patches with [pcolor = white] [set pcolor item ? colours]
+  ]
+
 end
 
 
 ; --- Setup vacuums ---
 to setup-vacuums
   ; In this method you may create the vacuum cleaner agents.
+
   create-vacuums num_agents
 
-  ask vacuums [
-
-    setxy random-xcor random-ycor
-    facexy random-xcor random-ycor
-    ask patches in-radius (vision_radius / 2) [ set pcolor blue ]
+  foreach turtle_list [
+    ask vacuum ? [
+      set color item ? colours
+      setxy random-xcor random-ycor
+      facexy random-xcor random-ycor
+      ask patches in-radius (vision_radius / 2) [ set pcolor brown ]
+    ]
   ]
-
 end
 
 
@@ -180,7 +190,7 @@ dirt_pct
 dirt_pct
 0
 100
-2
+6
 1
 1
 NIL
@@ -261,7 +271,7 @@ vision_radius
 vision_radius
 0
 100
-4
+3
 1
 1
 NIL
