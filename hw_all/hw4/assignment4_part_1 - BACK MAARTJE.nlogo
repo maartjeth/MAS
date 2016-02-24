@@ -201,20 +201,31 @@ to execute-actions
   ask vacuums [
     let clean_color own_color ; for some reason I couldn't do this in once
 
+    ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
       ask patches in-radius vision_radius [
         if pcolor = clean_color [
-          set pcolor black
+          set pcolor black ; to see that it works --> delete in final version
+          let x pxcor
+          let y pycor
 
           ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-            set beliefs lput (list pxcor pycor) beliefs
+            set beliefs lput (list x y) beliefs
+            sort-beliefs
           ]
         ]
       ]
     ]
+
+    ;if intention = move_to_dirt
   ]
 end
 
+to sort-beliefs
+  ask vacuums [
+     set beliefs sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] beliefs
+  ]
+end
 
 to set-in-radius [d]
 
@@ -256,7 +267,7 @@ dirt_pct
 dirt_pct
 0
 100
-6
+10
 1
 1
 NIL
@@ -322,7 +333,7 @@ num_agents
 num_agents
 2
 7
-4
+3
 1
 1
 NIL
