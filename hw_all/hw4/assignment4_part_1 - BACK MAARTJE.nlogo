@@ -120,9 +120,10 @@ to setup-vacuums
     ]
 
     ask sensor (? + num_agents) [
-      set shape "wheel"
+      set shape "circle"
       set size vision_radius
-      set color (grey + 2.5)
+      let colour [color] of vacuum ?
+      set color lput 100 extract-rgb colour
       setxy [xcor] of vacuum ? [ycor] of vacuum ?
       create-link-with vacuum ?
     ]
@@ -313,7 +314,7 @@ num_agents
 num_agents
 2
 7
-3
+4
 1
 1
 NIL
