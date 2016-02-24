@@ -121,8 +121,11 @@ end
 
 ; --- Setup beliefs ---
 to setup-beliefs
-  ask vacuums [
-    set beliefs []
+  foreach turtle_list [
+    ask vacuum ? [
+      set beliefs []
+      set own_color [color] of vacuum ?
+    ]
   ]
 end
 
@@ -168,6 +171,7 @@ to update-intentions
         set intention move_to_dirt
       ]
       [ set intention observe_environment ]
+    ]
   ]
 end
 
