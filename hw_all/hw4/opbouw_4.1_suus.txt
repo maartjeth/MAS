@@ -1,0 +1,31 @@
+Als belief (dirt) is leeg: move random tot hit border grid
+Als belief gevuld met eigen kleur: clean degene closest to current location
+Als ik nieuwe stap zet, kijk ik rond 
+Als ik dirt in mijn kleur zie, dan add to belief
+
+Dus:
+beliefs - coordinates van dirt in jouw kleur, sort zoals vorige keer
+desire - clean_all of stop --> mits tijd over
+
+intentions -
+als desire clean & beliefs is leeg en niet rand grid:
+	move around
+als desire clean & beliefs is leeg en rand grid
+	turn
+	move around
+als desire is clean & belief is niet leeg en locatie is niet vies:
+	move to dirt
+als desire is clean & belief is niet leef en locatie is vies:
+	clean dirt
+als desire is stop/false:
+	stop 
+
+als stapje gezet:
+	observe environment
+	als observe geeft dirt niet in beliefs:
+		add dirt to beliefs
+
+Notities:
+clean all kan geen boolean zijn, want 2 desires: clean en stop. Moet string worden, tenzij we het goed toelichten denk ik
+moet de begin intention niet observe environment zijn? (twijfel over jullie discussie, moet iedere intentie een aparte tick zijn, oftewel is obeserve en move apart?)
+observe environment als aparte methode voor het overzicht?
