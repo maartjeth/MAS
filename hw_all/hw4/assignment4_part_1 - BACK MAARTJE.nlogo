@@ -26,7 +26,7 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
-globals [total_dirty time x_end y_end clean_all dirt_locations turtle_list colours move_around observe_environment move_to_dirt move_to_bin int_x int_y check_int_x check_int_y clean_dirt]
+globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt move_to_bin int_x int_y check_int_x check_int_y clean_dirt]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
@@ -45,7 +45,7 @@ breed [vacuums vacuum]
 ; 2) desire: the agent's current desire
 ; 3) intention: the agent's current intention
 ; 4) own_color: the agent's belief about its own target color
-vacuums-own [beliefs desire intention own_color]
+vacuums-own [beliefs desire intention own_color dirt_locations]
 sensors-own []
 
 
@@ -56,10 +56,9 @@ to setup
   set x_end max-pxcor
   set y_end max-pycor
   set turtle_list n-values num_agents [?]
-  set colours [red orange yellow green blue violet pink]
+  set colours [red yellow green orange blue violet pink]
 
   set clean_all true    ; create the desire for the vacuum to clean or not
-  set dirt_locations []
 
   ; intentions
   set move_around "move_around"
@@ -112,6 +111,10 @@ to setup-vacuums
   create-vacuums num_agents
   create-sensors num_agents
 
+  ask vacuums [
+    set dirt_locations []
+  ]
+
   foreach turtle_list [
     ask vacuum ? [
       set color item ? colours
@@ -139,11 +142,9 @@ end
 
 ; --- Setup beliefs ---
 to setup-beliefs
-  foreach turtle_list [
-    ask vacuum ? [
-      set beliefs []
-      set own_color [color] of vacuum ?
-    ]
+  ask vacuums [
+     set own_color color
+     set beliefs []
   ]
 end
 
@@ -174,24 +175,26 @@ to update-beliefs
  ; You should update your agent's beliefs here.
  ; Please remember that you should use this method whenever your agents changes its position.
 
- ask vacuums [
-   if beliefs != [] [
-     let check_beliefs item 0 beliefs
-     set check_int_x item 0 check_beliefs
-     set check_int_y item 1 check_beliefs
-     ask patch check_int_x check_int_y [
-       if pcolor = white [
-         print "white"
-         set dirt_locations remove-item 0 dirt_locations
-       ]
-     ]
-     ifelse dirt_locations != [] [
-       sort-beliefs
-       set move_to_dirt item 0 dirt_locations
-     ]
-     [ set beliefs dirt_locations ]
-   ]
- ]
+  ask vacuums[
+      if beliefs != [] [
+        let check_beliefs item 0 beliefs
+        set check_int_x item 0 check_beliefs
+        set check_int_y item 1 check_beliefs
+        ask patch check_int_x check_int_y [
+          if pcolor = white [
+            print "white"
+            ask vacuums [
+              set dirt_locations remove-item 0 dirt_locations
+            ]
+          ]
+        ]
+        ifelse dirt_locations != [] [
+          sort-beliefs
+          set move_to_dirt item 0 dirt_locations
+        ]
+        [ set beliefs dirt_locations ]
+      ]
+    ]
 end
 
 
