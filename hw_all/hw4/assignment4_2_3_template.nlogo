@@ -345,7 +345,7 @@ to observe-environment
       ]
 
       [ ask vacuums with [color = clean_color] [
-          if (member? (list x y) outgoing_messages = false) [
+          if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
             set outgoing_messages lput (list pcolor x y) outgoing_messages
             print outgoing_messages
           ]
@@ -411,29 +411,34 @@ to send-messages
   ask vacuums [
     let sending_color color
     foreach outgoing_messages [
-       let vac_color item 0 ?
+       let receiving_color item 0 ?
        let coord_x item 1 ?
        let coord_y item 2 ?
 
        ask vacuums [
-         if own_color = vac_color [
+         if own_color = receiving_color [
            set incoming_messages lput (list sending_color coord_x coord_y) incoming_messages
          ]
        ]
 
        set sent_messages lput (list coord_x coord_y) sent_messages
     ]
+
+    set outgoing_messages []
   ]
 
 end
+
+; incoming messages --> kleur van turtle die verstuurd heeft niet goed
+; incoming messages --> drie keer dezelfde patch, terwijl twee verschillende
 @#$#@#$#@
 GRAPHICS-WINDOW
 786
 46
-1031
-300
--1
--1
+1303
+584
+12
+12
 20.31
 1
 10
@@ -444,10 +449,10 @@ GRAPHICS-WINDOW
 0
 0
 1
-0
-10
-0
-10
+-12
+12
+-12
+12
 1
 1
 1
@@ -544,7 +549,7 @@ vision_radius
 vision_radius
 0
 100
-2
+4
 1
 1
 NIL
