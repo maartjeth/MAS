@@ -40,7 +40,7 @@
 ; check_int_y
 ; clean_dirt --> intention = string
 globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
-  move_to_dirt int_x int_y check_int_x check_int_y clean_dirt clean_color coordinate dirt_locations
+  int_x int_y check_int_x check_int_y clean_dirt clean_color coordinate dirt_locations
   stop_simulation ]
 
 ; --- Agents ---
@@ -61,7 +61,7 @@ breed [vacuums vacuum]
 ; 3) intention: the agent's current intention
 ; 4) own_color: the agent's belief about its own target color
 ; dirt_locations
-vacuums-own [beliefs desire intention own_color dirt_loc_vac]
+vacuums-own [beliefs desire intention own_color dirt_loc_vac move_to_dirt]
 sensors-own []
 
 
@@ -80,7 +80,7 @@ to setup
   set move_around "move_around"
   set observe_environment "observe_environment"
   set clean_dirt "clean_dirt"
-  set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
+  ;set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
   set stop_simulation false
 
   setup-patches
@@ -130,6 +130,12 @@ to setup-vacuums
   create-vacuums num_agents
   create-sensors num_agents
 
+  ask vacuums [
+    set dirt_loc_vac []
+    set move_to_dirt []
+  ]
+
+
   foreach turtle_list [
     ask vacuum ? [
       set color item ? colours
@@ -155,20 +161,6 @@ to setup-vacuums
        ]
      ]
   ]
-
-  ;ask vacuums [
-  ;  let vac_color color
-  ;  if ask patches pcolor = vac_color [
-  ;    let coord_dirt (list pxcor pycor)
-  ;  ]
-
-  ;  ask patches with [pcolor = vac_color] [
-  ;    let coord_dirt (list pxcor pycor)
-  ;    ;ask vacuums [
-  ;    set dirt_loc_vac lput coord_dirt dirt_loc_vac ; works????
-  ;    ;]
-  ;  ]
-  ;]
 end
 
 
@@ -208,6 +200,7 @@ to update-desires
 
   ask vacuums [
     if dirt_loc_vac = [] [
+      print "yooo"
       stop ; stop if you don't have dirt for yourself anymore
     ]
   ]
@@ -223,7 +216,9 @@ to update-beliefs
  ; You should update your agent's beliefs here.
  ; Please remember that you should use this method whenever your agents changes its position.
 
+  let v 0
   ask vacuums[
+      ;print v
       if beliefs != [] [
         let check_beliefs item 0 beliefs
         set check_int_x item 0 check_beliefs
@@ -231,16 +226,26 @@ to update-beliefs
         ask patch check_int_x check_int_y [
           if pcolor = white [
             print "white"
-            ask vacuums [
-              set beliefs remove-item 0 beliefs
+            ask vacuum v [
+              ;print "asking"
+              ;print v
+              if beliefs != [] [
+                set beliefs remove-item 0 beliefs
+              ]
             ]
           ]
         ]
         if beliefs != [] [
           sort-beliefs
-          set move_to_dirt item 0 beliefs
+          ;print v
+          ;print "beliefs"
+          ;print beliefs
+          ;ask vacuum v [
+            set move_to_dirt item 0 beliefs
+          ;]
         ]
       ]
+      set v v + 1
     ]
 end
 
@@ -248,6 +253,7 @@ end
 ; --- Update intentions ---
 to update-intentions
   ; You should update your agent's intentions here.
+  let vac 0
   ask vacuums [
     ifelse desire = clean_all [
       if beliefs = [] [
@@ -272,6 +278,7 @@ to update-intentions
       ]
     ]
     [ set intention [] ]
+    set vac vac + 1
   ]
 end
 
@@ -311,7 +318,6 @@ end
 to observe-environment
   ask patches in-radius vision_radius [
     if pcolor = clean_color [
-      set pcolor black ; to see that it works --> delete in final version
       let x pxcor
       let y pycor
 
@@ -326,24 +332,28 @@ to move-to-dirt
   ; move the vacuum itself
   if xcor != int_x and ycor != int_y [
     forward 1
-  ]
-
-  ; move its sensor space
-  foreach turtle_list [
-    ask sensor (? + num_agents) [
-      setxy [xcor] of vacuum ? [ycor] of vacuum ?
-    ]
+    move-sensor
   ]
 
 end
 
 ; may want to change this to something neater
 to move-around
-  ifelse (xcor != max-pxcor and ycor != min-pycor) and (xcor != max-pxcor and ycor != max-pycor) and (xcor != min-pxcor and ycor != max-pycor) and (xcor != min-pxcor and ycor != min-pycor) [
+  ifelse (  (pycor = max-pycor and (heading > 270 or heading < 90)) or (pycor = min-pycor and (heading > 90 and heading < 270)) or (pxcor = min-pxcor and (heading > 180)) or (pxcor = max-pxcor and (heading < 180)) )  [
+    lt 95 ; to avoid loops
     forward 1
+    move-sensor
   ]
-  [lt 90
-   forward 1
+  [ forward 1
+    move-sensor ]
+end
+
+to move-sensor
+  ; move its sensor space
+  foreach turtle_list [
+    ask sensor (? + num_agents) [
+      setxy [xcor] of vacuum ? [ycor] of vacuum ?
+    ]
   ]
 end
 
@@ -467,7 +477,7 @@ num_agents
 num_agents
 2
 7
-3
+2
 1
 1
 NIL
