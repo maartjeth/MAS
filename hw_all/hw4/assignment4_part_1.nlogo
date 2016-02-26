@@ -334,7 +334,9 @@ to observe-environment
       let y pycor
 
       ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-        set beliefs lput (list x y) beliefs
+        if (member? (list x y) beliefs = false)[
+          set beliefs lput (list x y) beliefs
+        ]
       ]
     ]
   ]
