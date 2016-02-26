@@ -41,7 +41,7 @@
 ; clean_dirt --> intention = string
 globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
   int_x int_y check_int_x check_int_y clean_dirt clean_color coordinate dirt_locations
-  stop_simulation ]
+  stop_simulation patch_color coord_dirt]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
@@ -139,6 +139,7 @@ to setup-vacuums
   foreach turtle_list [
     ask vacuum ? [
       set color item ? colours
+      set own_color color
       setxy random-xcor random-ycor
       facexy random-xcor random-ycor
     ]
@@ -154,12 +155,33 @@ to setup-vacuums
   ]
 
   ask patches [
-     ask vacuums [
-       if pcolor = own_color [
-         let coord_dirt (list pxcor pycor)
+    set patch_color pcolor
+    set coord_dirt (list pxcor pycor)
+
+    if patch_color = 85 [
+    print "patch color"
+    print patch_color ]
+
+    ;ask vacuums [
+    ;  print "vacuum color"
+    ;  print own_color ]
+
+    ask vacuums [
+       if patch_color = own_color [
+         ; print "hello"
          set dirt_loc_vac lput coord_dirt dirt_loc_vac
        ]
-     ]
+    ]
+
+     ;ask vacuums [
+     ;  let color_v own_color
+     ;  print color_v
+     ;  if pcolor = color_v [
+     ;    print "hello"
+     ;    let coord_dirt (list pxcor pycor)
+     ;    set dirt_loc_vac lput coord_dirt dirt_loc_vac
+     ;  ]
+     ;]
   ]
 end
 
@@ -173,7 +195,7 @@ end
 ; --- Setup beliefs ---
 to setup-beliefs
   ask vacuums [
-     set own_color color
+     ;set own_color color
      set beliefs []
   ]
 end
@@ -200,7 +222,6 @@ to update-desires
 
   ask vacuums [
     if dirt_loc_vac = [] [
-      print "yooo"
       stop ; stop if you don't have dirt for yourself anymore
     ]
   ]
