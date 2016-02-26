@@ -24,7 +24,9 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
-globals [total_dirty time]
+globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
+  int_x int_y check_int_x check_int_y clean_dirt clean_color coordinate dirt_locations
+  stop_simulation patch_color coord_dirt]
 
 
 ; --- Agents ---
@@ -32,6 +34,7 @@ globals [total_dirty time]
 ;
 ; 1) vacuums: vacuum cleaner agents.
 breed [vacuums vacuum]
+breed [sensors sensor]
 
 
 ; --- Local variables ---
@@ -44,15 +47,31 @@ breed [vacuums vacuum]
 ; 5) other_colors: the agent's belief about the target colors of other agents
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
-vacuums-own [beliefs desire intention own_color other_colors outgoing_messages incoming_messages]
+vacuums-own [beliefs desire intention own_color dirt_loc_vac move_to_dirt desire_stop]
 
 
 ; --- Setup ---
 to setup
+  clear-all
   set time 0
+  set x_end max-pxcor
+  set y_end max-pycor
+  set turtle_list n-values num_agents [?]
+  set colours [red yellow green orange blue violet pink]
+
+  set clean_all true    ; create the desire for the vacuum to clean or not
+
+  ; intentions
+  set move_around "move_around"
+  set observe_environment "observe_environment"
+  set clean_dirt "clean_dirt"
+
   setup-patches
   setup-vacuums
   setup-ticks
+  setup-beliefs
+  setup-desires
+  setup-intentions
 end
 
 
@@ -60,37 +79,119 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 4.2 and 4.3, this involves updating desires, beliefs and intentions, executing actions, and sending messages (and advancing the tick counter).
+  set stop_simulation 0
   update-desires
   update-beliefs
   update-intentions
   execute-actions
   send-messages
   tick
+
+  ask vacuums [
+    if desire = desire_stop[
+      set stop_simulation stop_simulation + 1
+      stop
+   ]
+  ]
+
+  if stop_simulation = num_agents [
+    stop
+  ]
+
 end
 
 
 ; --- Setup patches ---
 to setup-patches
   ; In this method you may create the environment (patches), using colors to define cells with various types of dirt.
+  clear-patches
+  set total_dirty floor(count patches * dirt_pct / 100)
+  ask patches [set pcolor white]
+
+  let total_dirt_vacuum floor(total_dirty / num_agents)
+
+  foreach turtle_list [
+     ask n-of total_dirt_vacuum patches with [pcolor = white] [set pcolor item ? colours]
+  ]
+
 end
 
 
 ; --- Setup vacuums ---
 to setup-vacuums
   ; In this method you may create the vacuum cleaner agents.
+
+  create-vacuums num_agents
+  create-sensors num_agents
+
+  ask vacuums [
+    set dirt_loc_vac []
+    set move_to_dirt []
+  ]
+
+
+  foreach turtle_list [
+    ask vacuum ? [
+      set color item ? colours
+      set own_color color
+      setxy random-xcor random-ycor
+      facexy random-xcor random-ycor
+    ]
+
+    ask sensor (? + num_agents) [
+      set shape "circle"
+      set size vision_radius * 2
+      let colour [color] of vacuum ?
+      set color lput 100 extract-rgb colour
+      setxy [xcor] of vacuum ? [ycor] of vacuum ?
+      create-link-with vacuum ?
+    ]
+  ]
+
+  ask patches [
+    set patch_color pcolor
+    set coord_dirt (list pxcor pycor)
+
+    if patch_color = 85 [
+    print "patch color"
+    print patch_color ]
+
+    ask vacuums [
+       if patch_color = own_color [
+         set dirt_loc_vac lput coord_dirt dirt_loc_vac
+       ]
+    ]
+
+  ]
 end
 
 
 ; --- Setup ticks ---
 to setup-ticks
   ; In this method you may start the tick counter.
+  reset-ticks
 end
 
+; --- Setup beliefs ---
+to setup-beliefs
+  ask vacuums [
+     ;set own_color color
+     set beliefs []
+  ]
+end
 
-; --- Update desires ---
-to update-desires
-  ; You should update your agent's desires here.
-  ; Keep in mind that now you have more than one agent.
+; --- Setup desires ---
+to setup-desires
+  ask vacuums [
+     set desire clean_all
+  ]
+end
+
+; --- Setup intentions ---
+to setup-intentions
+  ask vacuums [
+     set intention move_around ; changes immediately in go
+  ]
 end
 
 
@@ -98,13 +199,77 @@ end
 to update-beliefs
  ; You should update your agent's beliefs here.
  ; Please remember that you should use this method whenever your agents changes its position.
- ; Also note that this method should distinguish between two cases, namely updating beliefs based on 1) observed information and 2) received messages.
+
+  let v 0
+  ask vacuums[
+      ;print v
+      if beliefs != [] [
+        let check_beliefs item 0 beliefs
+        set check_int_x item 0 check_beliefs
+        set check_int_y item 1 check_beliefs
+        ask patch check_int_x check_int_y [
+          if pcolor = white [
+            print "white"
+            ask vacuum v [
+
+              if beliefs != [] [
+                set beliefs remove-item 0 beliefs
+              ]
+            ]
+          ]
+        ]
+        if beliefs != [] [
+          sort-beliefs
+          set move_to_dirt item 0 beliefs
+        ]
+      ]
+      set v v + 1
+    ]
 end
 
+; --- Update desires ---
+to update-desires
+  ; You should update your agent's desires here.
+  ; Keep in mind that now you have more than one agent.
+
+  ask vacuums [
+    if dirt_loc_vac = [] [
+      set desire desire_stop ; stop if you don't have dirt for yourself anymore
+   ]
+  ]
+
+end
 
 ; --- Update intentions ---
 to update-intentions
   ; You should update your agent's intentions here.
+  let vac 0
+  ask vacuums [
+    ifelse desire = clean_all [
+      if beliefs = [] [
+        ifelse intention = observe_environment [
+          set intention move_around
+        ]
+        [ set intention observe_environment ]
+      ]
+
+      if beliefs != [] [
+        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
+          ifelse intention = move_to_dirt [
+            set intention observe_environment ]  ; you need to do this to make sure it's checking out its environment as well while running aorund
+
+          [ set intention move_to_dirt
+            set int_x item 0 intention
+            set int_y item 1 intention
+            facexy int_x int_y
+          ]
+        ]
+        [ set intention clean_dirt ]
+      ]
+    ]
+    [ set intention [] ]
+    set vac vac + 1
+  ]
 end
 
 
@@ -112,6 +277,92 @@ end
 to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving, cleaning, and (actively) looking around.
   ; Please note that your agents should perform only one action per tick!
+
+  ask vacuums [
+    set clean_color own_color ; for some reason I couldn't do this in once
+    ; observing environment --> adding pieces of dirt in radius to belief base
+    if intention = observe_environment [
+      observe-environment
+    ]
+
+    if intention = clean_dirt [
+      clean-dirt
+    ]
+
+    if intention = move_to_dirt [
+      move-to-dirt
+    ]
+
+    if intention = move_around [
+      move-around
+    ]
+  ]
+end
+
+to sort-beliefs
+  ask vacuums [
+     set beliefs sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] beliefs
+  ]
+end
+
+to observe-environment
+  ask patches in-radius vision_radius [
+    if pcolor = clean_color [
+      let x pxcor
+      let y pycor
+
+      ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+        set beliefs lput (list x y) beliefs
+      ]
+    ]
+  ]
+end
+
+to move-to-dirt
+  ; move the vacuum itself
+  if xcor != int_x and ycor != int_y [
+    forward 1
+    move-sensor
+  ]
+
+end
+
+; may want to change this to something neater
+to move-around
+  ifelse (  (pycor = max-pycor and (heading > 270 or heading < 90)) or (pycor = min-pycor and (heading > 90 and heading < 270)) or (pxcor = min-pxcor and (heading > 180)) or (pxcor = max-pxcor and (heading < 180)) )  [
+    lt 95 ; to avoid loops
+    forward 1
+    move-sensor
+  ]
+  [ forward 1
+    move-sensor ]
+end
+
+to move-sensor
+  ; move its sensor space
+  foreach turtle_list [
+    ask sensor (? + num_agents) [
+      setxy [xcor] of vacuum ? [ycor] of vacuum ?
+    ]
+  ]
+end
+
+to clean-dirt
+  if pcolor != white [
+    set pcolor white
+    set total_dirty total_dirty - 1
+    output-print "cleaned dirt"
+
+    if dirt_loc_vac != [] [
+      let i 0
+      foreach dirt_loc_vac [
+        if item 0 ? = pxcor and item 1 ? = pycor [
+          set dirt_loc_vac remove-item i dirt_loc_vac
+        ]
+        set i i + 1
+      ]
+    ]
+  ]
 end
 
 
