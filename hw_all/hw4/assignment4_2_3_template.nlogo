@@ -48,7 +48,7 @@ breed [sensors sensor]
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
 vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
-  dirt_loc_vac move_to_dirt]
+  dirt_loc_vac move_to_dirt observed_dirt]
 
 
 ; --- Setup ---
@@ -60,7 +60,9 @@ to setup
   set turtle_list n-values num_agents [?]
   set colours [red yellow green orange blue violet pink]
 
-  set clean_all true    ; create the desire for the vacuum to clean or not
+  ; desires
+  set clean_all "clean_all"    ; create the desire for the vacuum to clean or not
+  set desire_stop "desire_stop"
 
   ; intentions
   set move_around "move_around"
@@ -87,7 +89,7 @@ to go
   execute-actions
   send-messages
   tick
-  set time tick
+  set time ticks
 
   ask vacuums [
     if desire = desire_stop[
@@ -178,6 +180,7 @@ to setup-beliefs
   ask vacuums [
      ;set own_color color
      set beliefs []
+     set observed_dirt []
   ]
 end
 
@@ -203,6 +206,17 @@ to update-beliefs
 
   let v 0
   ask vacuums[
+
+      if observed_dirt != [] [
+        foreach observed_dirt [
+          let x item 0 ?
+          let y item 1 ?
+          if (member? (list x y) beliefs = false)[
+            set beliefs lput (list x y) beliefs
+          ]
+        ]
+        set observed_dirt []
+      ]
 
       if incoming_messages != [] [
         foreach incoming_messages [
@@ -233,7 +247,6 @@ to update-beliefs
 
         if beliefs != [] [
           sort-beliefs
-          set move_to_dirt item 0 beliefs
         ]
       ]
       set v v + 1
@@ -271,7 +284,8 @@ to update-intentions
           ifelse intention = move_to_dirt [
             set intention observe_environment ]  ; you need to do this to make sure it's checking out its environment as well while running aorund
 
-          [ set intention move_to_dirt
+          [ set move_to_dirt item 0 beliefs
+            set intention move_to_dirt
             set int_x item 0 intention
             set int_y item 1 intention
             facexy int_x int_y
@@ -326,9 +340,7 @@ to observe-environment
 
       ifelse pcolor = clean_color [
         ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-          if (member? (list x y) beliefs = false)[
-            set beliefs lput (list x y) beliefs
-          ]
+          set observed_dirt lput (list x y) observed_dirt
         ]
       ]
 
