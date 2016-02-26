@@ -104,6 +104,7 @@ to go
   update-intentions
   execute-actions
   tick
+  set time ticks
 
   ask vacuums [
     if desire = desire_stop[
