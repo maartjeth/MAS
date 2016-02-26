@@ -26,7 +26,7 @@
 ; 2) time: the total simulation time.
 globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
   int_x int_y check_int_x check_int_y clean_dirt clean_color coordinate dirt_locations
-  stop_simulation patch_color coord_dirt]
+  stop_simulation patch_color coord_dirt desire_stop]
 
 
 ; --- Agents ---
@@ -47,7 +47,8 @@ breed [sensors sensor]
 ; 5) other_colors: the agent's belief about the target colors of other agents
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
-vacuums-own [beliefs desire intention own_color dirt_loc_vac move_to_dirt desire_stop]
+vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
+  dirt_loc_vac move_to_dirt]
 
 
 ; --- Setup ---
@@ -86,6 +87,7 @@ to go
   execute-actions
   send-messages
   tick
+  set time tick
 
   ask vacuums [
     if desire = desire_stop[
@@ -127,6 +129,9 @@ to setup-vacuums
   ask vacuums [
     set dirt_loc_vac []
     set move_to_dirt []
+    set outgoing_messages []
+    set incoming_messages []
+    set sent_messages []
   ]
 
 
@@ -151,10 +156,6 @@ to setup-vacuums
   ask patches [
     set patch_color pcolor
     set coord_dirt (list pxcor pycor)
-
-    if patch_color = 85 [
-    print "patch color"
-    print patch_color ]
 
     ask vacuums [
        if patch_color = own_color [
@@ -202,22 +203,34 @@ to update-beliefs
 
   let v 0
   ask vacuums[
-      ;print v
+
+      if incoming_messages != [] [
+        foreach incoming_messages [
+          let sending_color item 0 ?
+          let x item 1 ?
+          let y item 2 ?
+
+          if (member? (list x y) beliefs = false)[
+            set beliefs lput (list x y) beliefs
+          ]
+
+        ]
+      ]
+
       if beliefs != [] [
         let check_beliefs item 0 beliefs
         set check_int_x item 0 check_beliefs
         set check_int_y item 1 check_beliefs
         ask patch check_int_x check_int_y [
           if pcolor = white [
-            print "white"
             ask vacuum v [
-
               if beliefs != [] [
                 set beliefs remove-item 0 beliefs
               ]
             ]
           ]
         ]
+
         if beliefs != [] [
           sort-beliefs
           set move_to_dirt item 0 beliefs
@@ -307,12 +320,24 @@ end
 
 to observe-environment
   ask patches in-radius vision_radius [
-    if pcolor = clean_color [
+    if pcolor != white [
       let x pxcor
       let y pycor
 
-      ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-        set beliefs lput (list x y) beliefs
+      ifelse pcolor = clean_color [
+        ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+          if (member? (list x y) beliefs = false)[
+            set beliefs lput (list x y) beliefs
+          ]
+        ]
+      ]
+
+      [ ask vacuums with [color = clean_color] [
+          if (member? (list x y) outgoing_messages = false) [
+            set outgoing_messages lput (list pcolor x y) outgoing_messages
+            print outgoing_messages
+          ]
+        ]
       ]
     ]
   ]
@@ -370,15 +395,33 @@ end
 to send-messages
   ; Here should put the code related to sending messages to other agents.
   ; Note that this could be seen as a special case of executing actions, but for conceptual clarity it has been put in a separate method.
+
+  ask vacuums [
+    let sending_color color
+    foreach outgoing_messages [
+       let vac_color item 0 ?
+       let coord_x item 1 ?
+       let coord_y item 2 ?
+
+       ask vacuums [
+         if own_color = vac_color [
+           set incoming_messages lput (list sending_color coord_x coord_y) incoming_messages
+         ]
+       ]
+
+       set sent_messages lput (list coord_x coord_y) sent_messages
+    ]
+  ]
+
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 786
 46
-1303
-584
-12
-12
+1031
+300
+-1
+-1
 20.31
 1
 10
@@ -389,10 +432,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--12
-12
--12
-12
+0
+10
+0
+10
 1
 1
 1
@@ -408,7 +451,7 @@ dirt_pct
 dirt_pct
 0
 100
-3
+12
 1
 1
 NIL
