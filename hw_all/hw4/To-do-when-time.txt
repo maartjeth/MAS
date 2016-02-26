@@ -1,5 +1,6 @@
-To do als we tijd hebben:
-
-- belief update van nieuwe dirts van observe environment naar update beliefs
-- move to dirt niet instellen bij beliefs maar bij intentions
+Veranderd: 
+- desire_stop is global geworden, desire_stop en clean_all zijn string geworden.
+- update belief heeft 1 regel minder, verplaatst naar update intentions
+- vacuum krijgt nieuwe local variable observed_dirt waar de coordinaten uit observe environment in worden opgeslagen. 
+- update beliefs krijgt nu een extra check, waarbij nieuwe dirtjes worden toegevoegd
 
