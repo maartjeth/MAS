@@ -172,10 +172,6 @@ to setup-vacuums
     set patch_color pcolor
     set coord_dirt (list pxcor pycor)
 
-    if patch_color = 85 [
-    print "patch color"
-    print patch_color ]
-
     ask vacuums [
        if patch_color = own_color [
          set dirt_loc_vac lput coord_dirt dirt_loc_vac
@@ -236,14 +232,12 @@ to update-beliefs
 
   let v 0
   ask vacuums[
-      ;print v
       if beliefs != [] [
         let check_beliefs item 0 beliefs
         set check_int_x item 0 check_beliefs
         set check_int_y item 1 check_beliefs
         ask patch check_int_x check_int_y [
           if pcolor = white [
-            print "white"
             ask vacuum v [
 
               if beliefs != [] [
@@ -265,7 +259,6 @@ end
 ; --- Update intentions ---
 to update-intentions
   ; You should update your agent's intentions here.
-  let vac 0
   ask vacuums [
     ifelse desire = clean_all [
       if beliefs = [] [
@@ -290,7 +283,6 @@ to update-intentions
       ]
     ]
     [ set intention [] ]
-    set vac vac + 1
   ]
 end
 
@@ -373,7 +365,7 @@ to clean-dirt
   if pcolor != white [
     set pcolor white
     set total_dirty total_dirty - 1
-    output-print "cleaned dirt"
+    ;output-print "cleaned dirt"
 
     if dirt_loc_vac != [] [
       let i 0
