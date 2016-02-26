@@ -184,7 +184,9 @@ to update-beliefs
           if pcolor = white [
             print "white"
             ask vacuums [
-              set dirt_locations remove-item 0 dirt_locations
+              if dirt_locations != [] [
+                 set dirt_locations remove-item 0 dirt_locations
+              ]
             ]
           ]
         ]

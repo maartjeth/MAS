@@ -39,7 +39,9 @@
 ; check_int_x
 ; check_int_y
 ; clean_dirt --> intention = string
-globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment move_to_dirt int_x int_y check_int_x check_int_y clean_dirt]
+globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
+  move_to_dirt int_x int_y check_int_x check_int_y clean_dirt clean_color coordinate dirt_locations
+  stop_simulation ]
 
 ; --- Agents ---
 ; The following types of agent (called 'breeds' in NetLogo) are given.
@@ -59,7 +61,7 @@ breed [vacuums vacuum]
 ; 3) intention: the agent's current intention
 ; 4) own_color: the agent's belief about its own target color
 ; dirt_locations
-vacuums-own [beliefs desire intention own_color dirt_locations]
+vacuums-own [beliefs desire intention own_color dirt_loc_vac]
 sensors-own []
 
 
@@ -79,7 +81,7 @@ to setup
   set observe_environment "observe_environment"
   set clean_dirt "clean_dirt"
   set move_to_dirt []   ; create an empty list which stores the coordinates of the dirt where the vacuum goes to
-
+  set stop_simulation false
 
   setup-patches
   setup-vacuums
@@ -99,6 +101,10 @@ to go
   update-intentions
   execute-actions
   tick
+
+  if stop_simulation = true [
+    stop
+  ]
 end
 
 
@@ -117,17 +123,12 @@ to setup-patches
 
 end
 
-
 ; --- Setup vacuums ---
 to setup-vacuums
   ; In this method you may create the vacuum cleaner agents.
 
   create-vacuums num_agents
   create-sensors num_agents
-
-  ask vacuums [
-    set dirt_locations []
-  ]
 
   foreach turtle_list [
     ask vacuum ? [
@@ -145,6 +146,29 @@ to setup-vacuums
       create-link-with vacuum ?
     ]
   ]
+
+  ask patches [
+     ask vacuums [
+       if pcolor = own_color [
+         let coord_dirt (list pxcor pycor)
+         set dirt_loc_vac lput coord_dirt dirt_loc_vac
+       ]
+     ]
+  ]
+
+  ;ask vacuums [
+  ;  let vac_color color
+  ;  if ask patches pcolor = vac_color [
+  ;    let coord_dirt (list pxcor pycor)
+  ;  ]
+
+  ;  ask patches with [pcolor = vac_color] [
+  ;    let coord_dirt (list pxcor pycor)
+  ;    ;ask vacuums [
+  ;    set dirt_loc_vac lput coord_dirt dirt_loc_vac ; works????
+  ;    ;]
+  ;  ]
+  ;]
 end
 
 
@@ -172,7 +196,7 @@ end
 ; --- Setup intentions ---
 to setup-intentions
   ask vacuums [
-     set intention move_around
+     set intention move_around ; changes immediately in go
   ]
 end
 
@@ -181,6 +205,16 @@ end
 to update-desires
   ; You should update your agent's desires here.
   ; Keep in mind that now you have more than one agent.
+
+  ask vacuums [
+    if dirt_loc_vac = [] [
+      stop ; stop if you don't have dirt for yourself anymore
+    ]
+  ]
+
+  if dirt_locations = [] [ ; all dirt locations
+    set stop_simulation true
+  ]
 end
 
 
@@ -198,15 +232,14 @@ to update-beliefs
           if pcolor = white [
             print "white"
             ask vacuums [
-              set dirt_locations remove-item 0 dirt_locations
+              set beliefs remove-item 0 beliefs
             ]
           ]
         ]
-        ifelse dirt_locations != [] [
+        if beliefs != [] [
           sort-beliefs
-          set move_to_dirt item 0 dirt_locations
+          set move_to_dirt item 0 beliefs
         ]
-        [ set beliefs dirt_locations ]
       ]
     ]
 end
@@ -217,7 +250,6 @@ to update-intentions
   ; You should update your agent's intentions here.
   ask vacuums [
     ifelse desire = clean_all [
-
       if beliefs = [] [
         ifelse intention = observe_environment [
           set intention move_around
@@ -226,9 +258,10 @@ to update-intentions
       ]
 
       if beliefs != [] [
-        ifelse distancexy (item 0 item 0 dirt_locations) (item 1 item 0 beliefs) > 0.5 [
+        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
           ifelse intention = move_to_dirt [
             set intention observe_environment ]  ; you need to do this to make sure it's checking out its environment as well while running aorund
+
           [ set intention move_to_dirt
             set int_x item 0 intention
             set int_y item 1 intention
@@ -249,46 +282,47 @@ to execute-actions
   ; Please note that your agents should perform only one action per tick!
 
   ask vacuums [
-    let clean_color own_color ; for some reason I couldn't do this in once
-
+    set clean_color own_color ; for some reason I couldn't do this in once
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
-      ask patches in-radius vision_radius [
-        if pcolor = clean_color [
-          set pcolor black ; to see that it works --> delete in final version
-          let x pxcor
-          let y pycor
-
-          ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-            set dirt_locations lput (list x y) dirt_locations
-            set beliefs dirt_locations
-          ]
-        ]
-      ]
+      observe-environment
     ]
 
     if intention = clean_dirt [
-       clean-dirt
+      clean-dirt
     ]
 
     if intention = move_to_dirt [
-      move
+      move-to-dirt
     ]
 
     if intention = move_around [
-     ;;; implement here the random move to the wall
+      move-around
     ]
   ]
 end
 
 to sort-beliefs
   ask vacuums [
-     set dirt_locations sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] dirt_locations
-     set beliefs dirt_locations
+     set beliefs sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] beliefs
   ]
 end
 
-to move
+to observe-environment
+  ask patches in-radius vision_radius [
+    if pcolor = clean_color [
+      set pcolor black ; to see that it works --> delete in final version
+      let x pxcor
+      let y pycor
+
+      ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+        set beliefs lput (list x y) beliefs
+      ]
+    ]
+  ]
+end
+
+to move-to-dirt
   ; move the vacuum itself
   if xcor != int_x and ycor != int_y [
     forward 1
@@ -303,16 +337,32 @@ to move
 
 end
 
+; may want to change this to something neater
+to move-around
+  ifelse (xcor != max-pxcor and ycor != min-pycor) and (xcor != max-pxcor and ycor != max-pycor) and (xcor != min-pxcor and ycor != max-pycor) and (xcor != min-pxcor and ycor != min-pycor) [
+    forward 1
+  ]
+  [lt 90
+   forward 1
+  ]
+end
+
 to clean-dirt
   if pcolor != white [
     set pcolor white
     set total_dirty total_dirty - 1
     output-print "cleaned dirt"
+
+    if dirt_loc_vac != [] [
+      let i 0
+      foreach dirt_loc_vac [
+        if item 0 ? = pxcor and item 1 ? = pycor [
+          set dirt_loc_vac remove-item i dirt_loc_vac
+        ]
+        set i i + 1
+      ]
+    ]
   ]
-end
-
-to set-in-radius [d]
-
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
