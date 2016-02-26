@@ -1,0 +1,5 @@
+To do als we tijd hebben:
+
+- belief update van nieuwe dirts van observe environment naar update beliefs
+- move to dirt niet instellen bij beliefs maar bij intentions
+
