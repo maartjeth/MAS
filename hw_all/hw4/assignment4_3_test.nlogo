@@ -267,10 +267,10 @@ to update-beliefs
             ]
           ]
         ]
+      ]
 
-        if beliefs != [] [
-          sort-beliefs
-        ]
+      if beliefs != [] [
+        sort-beliefs
       ]
       set v v + 1
     ]
