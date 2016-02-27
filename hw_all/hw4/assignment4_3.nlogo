@@ -49,7 +49,7 @@ breed [sensors sensor]
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
 vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
-  dirt_loc_vac move_to_dirt observed_dirt dirt_dict]
+  dirt_loc_vac move_to_dirt observed_dirt dirt_dict update_dirt_loc]
 
 
 ; --- Setup ---
@@ -90,6 +90,14 @@ to go
   update-intentions
   execute-actions
   send-messages
+
+  update-dirt-loc
+
+  ask vacuums [
+    print "dirt loc vac"
+    print dirt_loc_vac
+  ]
+
   tick
   set time ticks
 
@@ -131,6 +139,7 @@ to setup-vacuums
   create-vacuums num_agents
   create-sensors num_agents
 
+
   ask vacuums [
     set dirt_loc_vac []
     set move_to_dirt []
@@ -140,6 +149,7 @@ to setup-vacuums
     set other_color []
     set color black
     set own_color color
+    set update_dirt_loc false
     set label who ; delete
     set label-color blue ; delete
     setxy random-xcor random-ycor
@@ -157,13 +167,28 @@ to setup-vacuums
     ]
   ]
 
+  ;let i 0
   ; set dict table for each vacuum per observed color to 0
   ask vacuums [
     set dirt_dict table:make
     foreach colours [
       table:put dirt_dict ? 0
     ]
+    ;set i i + 1
   ]
+
+  ;let v 1
+  ;ask vacuum v [
+  ;  let counter table:get dirt_dict 15
+  ;  table:put dirt_dict 15 counter + 1
+  ;]
+
+  ;ask vacuums [
+  ;  print "DIRT DICT"
+  ;  print dirt_dict
+  ;]
+
+
 
   ask patches [
     set patch_color pcolor
@@ -265,12 +290,11 @@ to update-desires
   ; You should update your agent's desires here.
   ; Keep in mind that now you have more than one agent.
 
-  ;ask vacuums [
-  ;  if dirt_loc_vac = [] [
-  ;    set desire desire_stop ; stop if you don't have dirt for yourself anymore
-  ; ]
-  ;]
-
+  ask vacuums [
+    if dirt_loc_vac = [] and own_color != black[
+      set desire desire_stop ; stop if you chose a color and all the dirt of that color is cleaned
+   ]
+  ]
 end
 
 ; --- Update intentions ---
@@ -361,12 +385,12 @@ to observe-environment [v]
 
             ifelse counter < dirt_threshold [ ; if lower than threshold, just count
               table:put [dirt_dict] of vacuum v observed_color (counter + 1)
-              print dirt_dict
+
             ]
 
 
-            [ if (member? observed_color other_color = false) [ ; if the other don't take care of this colour yet
 
+            [ if (member? observed_color other_color = false) [ ; if one of the others don't take care of this colour yet
                 set color observed_color
                 set own_color observed_color
                 ask sensor (v + num_agents) [
@@ -374,8 +398,12 @@ to observe-environment [v]
                 ]
                 send-color-message observed_color ; send the observed color to the other age
                 set observed_dirt [] ; now you can start counting the observed dirt again
+                set update_dirt_loc true
               ]
             ]
+            print v
+            print "dirt dict"
+            print dirt_dict
           ]
         ]
       ]
@@ -402,6 +430,21 @@ to observe-environment [v]
   ]
 end
 
+to update-dirt-loc
+  ask patches [
+    set patch_color pcolor
+    set coord_dirt (list pxcor pycor)
+
+    ask vacuums [
+      if update_dirt_loc = true [
+        if patch_color = own_color [
+          set dirt_loc_vac lput coord_dirt dirt_loc_vac
+        ]
+      ]
+    ]
+  ]
+end
+
 to send-color-message [observed_color]
   ; if vacuum doesn't have this colour, add colour to the other colours
   ask vacuums [
@@ -410,6 +453,8 @@ to send-color-message [observed_color]
         set other_color lput observed_color other_color
       ]
     ]
+
+
   ]
 
 end

@@ -338,6 +338,7 @@ end
 
 to observe-environment
   ask patches in-radius vision_radius [
+
     if pcolor != white [
 
       let x pxcor
