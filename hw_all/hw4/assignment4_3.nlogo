@@ -137,6 +137,7 @@ to setup-vacuums
     set outgoing_messages []
     set incoming_messages []
     set sent_messages []
+    set other_color []
     set color black
     set own_color color
     setxy random-xcor random-ycor
@@ -309,12 +310,13 @@ to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving, cleaning, and (actively) looking around.
   ; Please note that your agents should perform only one action per tick!
 
+  let v 0
   ask vacuums [
     set my_color own_color ; for some reason I couldn't do this in once
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
       print "observe environment"
-      observe-environment
+      observe-environment v
     ]
 
     if intention = clean_dirt [
@@ -331,6 +333,8 @@ to execute-actions
       print "moving around "
       move-around
     ]
+
+    set v v + 1
   ]
 end
 
@@ -340,45 +344,50 @@ to sort-beliefs
   ]
 end
 
-to observe-environment
+to observe-environment [v]
+
   ask patches in-radius vision_radius [
     let observed_color pcolor
 
-    if my_color = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
+    ifelse my_color = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
       if observed_color != white [ ; increase counter in dict
-        ask vacuums with [color = my_color] [
+
+        ask vacuum v [
           let counter table:get dirt_dict observed_color
           ifelse counter < dirt_threshold [
             table:put dirt_dict observed_color counter + 1
           ]
-          [ set color observed_color
-            set own_color observed_color
-            ask sensors
-             ]
+          [ if (member? observed_color other_color = false) [ ; if the other don't take care of this colour yet
+              set color observed_color
+              set own_color observed_color
+              ask sensor (v + num_agents) [
+                set color lput 100 extract-rgb observed_color
+              ]
+              ; + add this color to other_color  list of other vacuums
+            ]
+          ]
         ]
       ]
     ]
+    ; if you have your colour already --> behave just as previous assignment
+    [ if pcolor != white [
+        let x pxcor
+        let y pycor
+        let sending_color pcolor
 
-
-    ;if pcolor != white [
-
-    ;  let x pxcor
-    ;  let y pycor
-    ;  let sending_color pcolor
-
-    ;  ifelse pcolor = my_color [
-    ;    ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-    ;      set observed_dirt lput (list x y) observed_dirt
-    ;    ]
-    ;  ]
-
-    ;  [ ask vacuums with [color = my_color] [
-    ;      if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
-    ;        set outgoing_messages lput (list sending_color x y) outgoing_messages
-    ;      ]
-    ;    ]
-     ; ]
-    ;]
+        ifelse pcolor = my_color [
+          ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+            set observed_dirt lput (list x y) observed_dirt
+          ]
+        ]
+        [ ask vacuums with [color = my_color] [
+            if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
+              set outgoing_messages lput (list sending_color x y) outgoing_messages
+            ]
+          ]
+        ]
+      ]
+    ]
   ]
 end
 
@@ -800,7 +809,7 @@ dirt_threshold
 dirt_threshold
 0
 10
-1
+3
 1
 1
 NIL
