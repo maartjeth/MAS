@@ -25,7 +25,7 @@
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
 globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
-  int_x int_y check_int_x check_int_y clean_dirt clean_color coordinate dirt_locations
+  int_x int_y check_int_x check_int_y clean_dirt my_color coordinate dirt_locations
   stop_simulation patch_color coord_dirt desire_stop]
 
 
@@ -207,6 +207,7 @@ to update-beliefs
   let v 0
   ask vacuums[
 
+      ; put the dirt you've observed yourself into your beliefs
       if observed_dirt != [] [
         foreach observed_dirt [
           let x item 0 ?
@@ -218,6 +219,7 @@ to update-beliefs
         set observed_dirt []
       ]
 
+      ; read your incoming messages and put that into your beliefs
       if incoming_messages != [] [
         foreach incoming_messages [
           let sending_color item 0 ?
@@ -229,8 +231,10 @@ to update-beliefs
           ]
 
         ]
+        set incoming_messages []
       ]
 
+      ; delete pieces of dirt you've already cleaned from your belief list and sort the list
       if beliefs != [] [
         let check_beliefs item 0 beliefs
         set check_int_x item 0 check_beliefs
@@ -306,7 +310,7 @@ to execute-actions
   ; Please note that your agents should perform only one action per tick!
 
   ask vacuums [
-    set clean_color own_color ; for some reason I couldn't do this in once
+    set my_color own_color ; for some reason I couldn't do this in once
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
       observe-environment
@@ -335,19 +339,20 @@ end
 to observe-environment
   ask patches in-radius vision_radius [
     if pcolor != white [
+
       let x pxcor
       let y pycor
+      let sending_color pcolor
 
-      ifelse pcolor = clean_color [
-        ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+      ifelse pcolor = my_color [
+        ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
           set observed_dirt lput (list x y) observed_dirt
         ]
       ]
 
-      [ ask vacuums with [color = clean_color] [
+      [ ask vacuums with [color = my_color] [
           if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
-            set outgoing_messages lput (list pcolor x y) outgoing_messages
-            print outgoing_messages
+            set outgoing_messages lput (list sending_color x y) outgoing_messages
           ]
         ]
       ]
@@ -409,7 +414,7 @@ to send-messages
   ; Note that this could be seen as a special case of executing actions, but for conceptual clarity it has been put in a separate method.
 
   ask vacuums [
-    let sending_color color
+    let sending_color color ; set the colour of the vacuum that's gonna send its message
     foreach outgoing_messages [
        let receiving_color item 0 ?
        let coord_x item 1 ?
@@ -534,7 +539,7 @@ num_agents
 num_agents
 2
 7
-3
+2
 1
 1
 NIL
