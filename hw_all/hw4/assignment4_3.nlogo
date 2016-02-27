@@ -211,7 +211,7 @@ to update-beliefs
   ask vacuums[
 
       ; put the dirt you've observed yourself into your beliefs
-      if observed_dirt != [] [
+      if observed_dirt != [] and own_color != black [
         foreach observed_dirt [
           let x item 0 ?
           let y item 1 ?
@@ -349,21 +349,32 @@ end
 to observe-environment [v]
   ask patches in-radius vision_radius [
     let observed_color pcolor
+    let x_patch pxcor
+    let y_patch pycor
 
     ifelse [color] of vacuum v = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
       if observed_color != white [ ; increase counter in dict
         ask vacuum v [
-          let counter table:get dirt_dict observed_color
-          ifelse counter < dirt_threshold [
-            table:put dirt_dict observed_color counter + 1
-          ]
-          [ if (member? observed_color other_color = false) [ ; if the other don't take care of this colour yet
-              set color observed_color
-              set own_color observed_color
-              ask sensor (v + num_agents) [
-                set color lput 100 extract-rgb observed_color
+          if (member? (list x_patch y_patch) observed_dirt = false) [ ; check that you haven't seen the piece of dirt before
+            set observed_dirt lput (list x_patch y_patch) observed_dirt ; add this piece to the pieces you've seen
+            let counter table:get [dirt_dict] of vacuum v observed_color
+
+            ifelse counter < dirt_threshold [ ; if lower than threshold, just count
+              table:put [dirt_dict] of vacuum v observed_color (counter + 1)
+              print dirt_dict
+            ]
+
+
+            [ if (member? observed_color other_color = false) [ ; if the other don't take care of this colour yet
+
+                set color observed_color
+                set own_color observed_color
+                ask sensor (v + num_agents) [
+                  set color lput 100 extract-rgb observed_color
+                ]
+                send-color-message observed_color ; send the observed color to the other age
+                set observed_dirt [] ; now you can start counting the observed dirt again
               ]
-              send-color-message observed_color ; send the observed color to the other agents
             ]
           ]
         ]
@@ -513,7 +524,7 @@ dirt_pct
 dirt_pct
 0
 100
-5
+4
 1
 1
 NIL
@@ -579,7 +590,7 @@ num_agents
 num_agents
 2
 7
-3
+2
 1
 1
 NIL
@@ -818,7 +829,7 @@ dirt_threshold
 dirt_threshold
 0
 10
-7
+3
 1
 1
 NIL
