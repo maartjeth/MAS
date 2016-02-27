@@ -3,7 +3,7 @@
 ; Lab assistants: D. Formolo & L. Medeiros
 
 
-; --- Assignment 4.2 & 4.3 - Template ---
+; --- Assignment 4.3
 ; Please use this template as a basis for the code to generate the behaviour of your team of vacuum cleaners.
 ; However, feel free to extend this with any variable or method you think is necessary.
 
