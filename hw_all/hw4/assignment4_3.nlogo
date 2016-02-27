@@ -342,7 +342,7 @@ to execute-actions
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
       print "observe environment"
-      observe-environment v
+      observe-environment who
     ]
 
     if intention = clean_dirt [
@@ -383,14 +383,14 @@ to observe-environment [v]
             set observed_dirt lput (list x_patch y_patch) observed_dirt ; add this piece to the pieces you've seen
             let counter table:get [dirt_dict] of vacuum v observed_color
 
-            ifelse counter < dirt_threshold [ ; if lower than threshold, just count
+            if counter < dirt_threshold [ ; if lower than threshold, just count
               table:put [dirt_dict] of vacuum v observed_color (counter + 1)
+              set counter counter + 1
 
             ]
 
-
-
-            [ if (member? observed_color other_color = false) [ ; if one of the others don't take care of this colour yet
+            if counter >= dirt_threshold [
+              if (member? observed_color other_color = false) [ ; if one of the others don't take care of this colour yet
                 set color observed_color
                 set own_color observed_color
                 ask sensor (v + num_agents) [
