@@ -18,6 +18,7 @@
 ; 3) vision_radius: distance (in terms of number of cells) that the agents can 'see'
 ; For instance, if this radius is 3, then agents will be able to observe dirt in a cell that is 3 cells away from their own location.
 
+extensions [table]
 
 ; --- Global variables ---
 ; The following global variables are given.
@@ -48,7 +49,7 @@ breed [sensors sensor]
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
 vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
-  dirt_loc_vac move_to_dirt observed_dirt]
+  dirt_loc_vac move_to_dirt observed_dirt dirt_dict]
 
 
 ; --- Setup ---
@@ -58,6 +59,7 @@ to setup
   set x_end max-pxcor
   set y_end max-pycor
   set turtle_list n-values num_agents [?]
+
   set colours [red yellow green orange blue violet pink]
 
   ; desires
@@ -149,6 +151,14 @@ to setup-vacuums
       set color lput 100 extract-rgb colour
       setxy [xcor] of vacuum ? [ycor] of vacuum ?
       create-link-with vacuum ?
+    ]
+  ]
+
+  ; set dict table for each vacuum per observed color to 0
+  ask vacuums [
+    set dirt_dict table:make
+    foreach colours [
+      table:put dirt_dict ? 0
     ]
   ]
 
@@ -252,11 +262,11 @@ to update-desires
   ; You should update your agent's desires here.
   ; Keep in mind that now you have more than one agent.
 
-  ask vacuums [
-    if dirt_loc_vac = [] [
-      set desire desire_stop ; stop if you don't have dirt for yourself anymore
-   ]
-  ]
+  ;ask vacuums [
+  ;  if dirt_loc_vac = [] [
+  ;    set desire desire_stop ; stop if you don't have dirt for yourself anymore
+  ; ]
+  ;]
 
 end
 
@@ -303,18 +313,22 @@ to execute-actions
     set my_color own_color ; for some reason I couldn't do this in once
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
+      print "observe environment"
       observe-environment
     ]
 
     if intention = clean_dirt [
+      print "cleaning dirt"
       clean-dirt
     ]
 
     if intention = move_to_dirt [
+      print "moving to dirt"
       move-to-dirt
     ]
 
     if intention = move_around [
+      print "moving around "
       move-around
     ]
   ]
@@ -328,25 +342,43 @@ end
 
 to observe-environment
   ask patches in-radius vision_radius [
-    if pcolor != white [
+    let observed_color pcolor
 
-      let x pxcor
-      let y pycor
-      let sending_color pcolor
-
-      ifelse pcolor = my_color [
-        ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-          set observed_dirt lput (list x y) observed_dirt
-        ]
-      ]
-
-      [ ask vacuums with [color = my_color] [
-          if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
-            set outgoing_messages lput (list sending_color x y) outgoing_messages
+    if my_color = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
+      if observed_color != white [ ; increase counter in dict
+        ask vacuums with [color = my_color] [
+          let counter table:get dirt_dict observed_color
+          ifelse counter < dirt_threshold [
+            table:put dirt_dict observed_color counter + 1
           ]
+          [ set color observed_color
+            set own_color observed_color
+            ask sensors
+             ]
         ]
       ]
     ]
+
+
+    ;if pcolor != white [
+
+    ;  let x pxcor
+    ;  let y pycor
+    ;  let sending_color pcolor
+
+    ;  ifelse pcolor = my_color [
+    ;    ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+    ;      set observed_dirt lput (list x y) observed_dirt
+    ;    ]
+    ;  ]
+
+    ;  [ ask vacuums with [color = my_color] [
+    ;      if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
+    ;        set outgoing_messages lput (list sending_color x y) outgoing_messages
+    ;      ]
+    ;    ]
+     ; ]
+    ;]
   ]
 end
 
@@ -529,7 +561,7 @@ num_agents
 num_agents
 2
 7
-3
+2
 1
 1
 NIL
@@ -758,6 +790,21 @@ time
 17
 1
 11
+
+SLIDER
+796
+655
+968
+688
+dirt_threshold
+dirt_threshold
+0
+10
+1
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
