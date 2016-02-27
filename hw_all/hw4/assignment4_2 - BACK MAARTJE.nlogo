@@ -3,7 +3,7 @@
 ; Lab assistants: D. Formolo & L. Medeiros
 
 
-; --- Assignment 4.3
+; --- Assignment 4.2 & 4.3 - Template ---
 ; Please use this template as a basis for the code to generate the behaviour of your team of vacuum cleaners.
 ; However, feel free to extend this with any variable or method you think is necessary.
 
@@ -18,7 +18,6 @@
 ; 3) vision_radius: distance (in terms of number of cells) that the agents can 'see'
 ; For instance, if this radius is 3, then agents will be able to observe dirt in a cell that is 3 cells away from their own location.
 
-extensions [table]
 
 ; --- Global variables ---
 ; The following global variables are given.
@@ -49,7 +48,7 @@ breed [sensors sensor]
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
 vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
-  dirt_loc_vac move_to_dirt observed_dirt dirt_dict]
+  dirt_loc_vac move_to_dirt observed_dirt]
 
 
 ; --- Setup ---
@@ -59,7 +58,6 @@ to setup
   set x_end max-pxcor
   set y_end max-pycor
   set turtle_list n-values num_agents [?]
-
   set colours [red yellow green orange blue violet pink]
 
   ; desires
@@ -126,7 +124,6 @@ end
 ; --- Setup vacuums ---
 to setup-vacuums
   ; In this method you may create the vacuum cleaner agents.
-  ; set the vacuums and the sensors to black at the start
 
   create-vacuums num_agents
   create-sensors num_agents
@@ -137,16 +134,17 @@ to setup-vacuums
     set outgoing_messages []
     set incoming_messages []
     set sent_messages []
-    set other_color []
-    set color black
-    set own_color color
-    set label who ; delete
-    set label-color blue ; delete
-    setxy random-xcor random-ycor
-    facexy random-xcor random-ycor
   ]
 
+
   foreach turtle_list [
+    ask vacuum ? [
+      set color item ? colours
+      set own_color color
+      setxy random-xcor random-ycor
+      facexy random-xcor random-ycor
+    ]
+
     ask sensor (? + num_agents) [
       set shape "circle"
       set size vision_radius * 2
@@ -157,17 +155,16 @@ to setup-vacuums
     ]
   ]
 
-  ; set dict table for each vacuum per observed color to 0
-  ask vacuums [
-    set dirt_dict table:make
-    foreach colours [
-      table:put dirt_dict ? 0
-    ]
-  ]
-
   ask patches [
     set patch_color pcolor
     set coord_dirt (list pxcor pycor)
+
+    ask vacuums [
+       if patch_color = own_color [
+         set dirt_loc_vac lput coord_dirt dirt_loc_vac
+       ]
+    ]
+
   ]
 end
 
@@ -265,11 +262,11 @@ to update-desires
   ; You should update your agent's desires here.
   ; Keep in mind that now you have more than one agent.
 
-  ;ask vacuums [
-  ;  if dirt_loc_vac = [] [
-  ;    set desire desire_stop ; stop if you don't have dirt for yourself anymore
-  ; ]
-  ;]
+  ask vacuums [
+    if dirt_loc_vac = [] [
+      set desire desire_stop ; stop if you don't have dirt for yourself anymore
+   ]
+  ]
 
 end
 
@@ -312,31 +309,24 @@ to execute-actions
   ; Here you should put the code related to the actions performed by your agent: moving, cleaning, and (actively) looking around.
   ; Please note that your agents should perform only one action per tick!
 
-  let v 0
   ask vacuums [
     set my_color own_color ; for some reason I couldn't do this in once
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
-      print "observe environment"
-      observe-environment v
+      observe-environment
     ]
 
     if intention = clean_dirt [
-      print "cleaning dirt"
       clean-dirt
     ]
 
     if intention = move_to_dirt [
-      print "moving to dirt"
       move-to-dirt
     ]
 
     if intention = move_around [
-      print "moving around "
       move-around
     ]
-
-    set v v + 1
   ]
 end
 
@@ -346,61 +336,28 @@ to sort-beliefs
   ]
 end
 
-to observe-environment [v]
+to observe-environment
   ask patches in-radius vision_radius [
-    let observed_color pcolor
+    if pcolor != white [
 
-    ifelse [color] of vacuum v = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
-      if observed_color != white [ ; increase counter in dict
-        ask vacuum v [
-          let counter table:get dirt_dict observed_color
-          ifelse counter < dirt_threshold [
-            table:put dirt_dict observed_color counter + 1
-          ]
-          [ if (member? observed_color other_color = false) [ ; if the other don't take care of this colour yet
-              set color observed_color
-              set own_color observed_color
-              ask sensor (v + num_agents) [
-                set color lput 100 extract-rgb observed_color
-              ]
-              send-color-message observed_color ; send the observed color to the other agents
-            ]
-          ]
+      let x pxcor
+      let y pycor
+      let sending_color pcolor
+
+      ifelse pcolor = my_color [
+        ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+          set observed_dirt lput (list x y) observed_dirt
         ]
       ]
-    ]
-    ; if you have your colour already --> behave just as previous assignment
-    [ if pcolor != white [
-        let x pxcor
-        let y pycor
-        let sending_color pcolor
 
-        ifelse pcolor = my_color [
-          ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-            set observed_dirt lput (list x y) observed_dirt
-          ]
-        ]
-        [ ask vacuums with [color = my_color] [
-            if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
-              set outgoing_messages lput (list sending_color x y) outgoing_messages
-            ]
+      [ ask vacuums with [color = my_color] [
+          if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
+            set outgoing_messages lput (list sending_color x y) outgoing_messages
           ]
         ]
       ]
     ]
   ]
-end
-
-to send-color-message [observed_color]
-  ; if vacuum doesn't have this colour, add colour to the other colours
-  ask vacuums [
-    if own_color != observed_color [
-      if (member? observed_color other_color = false) [
-        set other_color lput observed_color other_color
-      ]
-    ]
-  ]
-
 end
 
 to move-to-dirt
@@ -476,6 +433,9 @@ to send-messages
   ]
 
 end
+
+; incoming messages --> kleur van turtle die verstuurd heeft niet goed
+; incoming messages --> drie keer dezelfde patch, terwijl twee verschillende
 @#$#@#$#@
 GRAPHICS-WINDOW
 786
@@ -513,7 +473,7 @@ dirt_pct
 dirt_pct
 0
 100
-5
+12
 1
 1
 NIL
@@ -579,7 +539,7 @@ num_agents
 num_agents
 2
 7
-3
+2
 1
 1
 NIL
@@ -808,21 +768,6 @@ time
 17
 1
 11
-
-SLIDER
-796
-655
-968
-688
-dirt_threshold
-dirt_threshold
-0
-10
-7
-1
-1
-NIL
-HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?

@@ -48,7 +48,7 @@ breed [sensors sensor]
 ; 5) other_colors: the agent's belief about the target colors of other agents
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
-vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
+vacuums-own [beliefs desire intention own_color other_colors outgoing_messages incoming_messages sent_messages
   dirt_loc_vac move_to_dirt observed_dirt dirt_dict]
 
 
@@ -137,11 +137,9 @@ to setup-vacuums
     set outgoing_messages []
     set incoming_messages []
     set sent_messages []
-    set other_color []
+    set other_colors []
     set color black
     set own_color color
-    set label who ; delete
-    set label-color blue ; delete
     setxy random-xcor random-ycor
     facexy random-xcor random-ycor
   ]
@@ -225,14 +223,31 @@ to update-beliefs
       ; read your incoming messages and put that into your beliefs
       if incoming_messages != [] [
         foreach incoming_messages [
-          let sending_color item 0 ?
-          let x item 1 ?
-          let y item 2 ?
+          ; if the length of the list is 2, the message contains a claimed color of another agent
+          ifelse length ? = 2 [
+            let other_vacuum item 0 ?
+            let claimed_color item 1 ?
+            if (member? (list other_vacuum claimed_color) other_colors = false) [
+              set other_colors lput (list other_vacuum claimed_color) other_colors
+              print "own color"
+              print own_color
+              print other_colors
+              if length other_colors = num_agents - 1 and own_color != black[
+                ; hier zeggen als de rest al een kleur heeft, kies dan de laatste kleur
+                ; voor iedere kleur in de lijst, num_agents positions checken. Als turtle with color is die color leeg, dan neem die color.
 
-          if (member? (list x y) beliefs = false)[
-            set beliefs lput (list x y) beliefs
+              ]
+            ]
+          ] ; else the length of the list is three, and it is a location of a dirt piece
+          [
+            let sending_color item 0 ?
+            let x item 1 ?
+            let y item 2 ?
+
+            if (member? (list x y) beliefs = false)[
+              set beliefs lput (list x y) beliefs
+            ]
           ]
-
         ]
         set incoming_messages []
       ]
@@ -265,11 +280,11 @@ to update-desires
   ; You should update your agent's desires here.
   ; Keep in mind that now you have more than one agent.
 
-  ;ask vacuums [
-  ;  if dirt_loc_vac = [] [
-  ;    set desire desire_stop ; stop if you don't have dirt for yourself anymore
-  ; ]
-  ;]
+  ask vacuums [
+    if dirt_loc_vac = [] and own_color != black[
+      set desire desire_stop ; stop if you chose a color and all the dirt of that color is cleaned
+   ]
+  ]
 
 end
 
@@ -315,24 +330,20 @@ to execute-actions
   let v 0
   ask vacuums [
     set my_color own_color ; for some reason I couldn't do this in once
-    ; observing environment --> adding pieces of dirt in radius to belief base
+
     if intention = observe_environment [
-      print "observe environment"
       observe-environment v
     ]
 
     if intention = clean_dirt [
-      print "cleaning dirt"
       clean-dirt
     ]
 
     if intention = move_to_dirt [
-      print "moving to dirt"
       move-to-dirt
     ]
 
     if intention = move_around [
-      print "moving around "
       move-around
     ]
 
@@ -346,61 +357,59 @@ to sort-beliefs
   ]
 end
 
+; observing environment --> adding pieces of dirt in radius to belief base
 to observe-environment [v]
+
   ask patches in-radius vision_radius [
     let observed_color pcolor
 
-    ifelse [color] of vacuum v = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
+    ifelse my_color = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
       if observed_color != white [ ; increase counter in dict
+
         ask vacuum v [
           let counter table:get dirt_dict observed_color
           ifelse counter < dirt_threshold [
             table:put dirt_dict observed_color counter + 1
           ]
-          [ if (member? observed_color other_color = false) [ ; if the other don't take care of this colour yet
+          [ if (member? observed_color other_colors = false) [ ; if the other don't take care of this colour yet
               set color observed_color
               set own_color observed_color
               ask sensor (v + num_agents) [
                 set color lput 100 extract-rgb observed_color
               ]
-              send-color-message observed_color ; send the observed color to the other agents
+              set outgoing_messages lput (list v own_color) outgoing_messages ; send a message to let others know you chose a color
             ]
           ]
         ]
       ]
     ]
-    ; if you have your colour already --> behave just as previous assignment
-    [ if pcolor != white [
-        let x pxcor
-        let y pycor
-        let sending_color pcolor
+    ; if you have your colour already --> if another has the same color, let one agent keep that color, rest goes back to black
+    ;                                     else behave just as previous assignment
+    [ ifelse (member? own_color other_colors = true) [
+        ; laat the vacuum met laagste getal hem houden, rest wordt zwart.
+        ; optie: opvragen welke turtles die kleur hebben, en degene met laagste ID houdt hem
+        ; andere optie: met opslaan van kleur ook erbij opslaan wie die kleur heeft
+      ][
+        if pcolor != white [
+          let x pxcor
+          let y pycor
+          let sending_color pcolor
 
-        ifelse pcolor = my_color [
-          ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
-            set observed_dirt lput (list x y) observed_dirt
+          ifelse pcolor = my_color [
+            ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+              set observed_dirt lput (list x y) observed_dirt
+            ]
           ]
-        ]
-        [ ask vacuums with [color = my_color] [
-            if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
-              set outgoing_messages lput (list sending_color x y) outgoing_messages
+          [ ask vacuums with [color = my_color] [
+              if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
+                set outgoing_messages lput (list sending_color x y) outgoing_messages
+              ]
             ]
           ]
         ]
       ]
     ]
   ]
-end
-
-to send-color-message [observed_color]
-  ; if vacuum doesn't have this colour, add colour to the other colours
-  ask vacuums [
-    if own_color != observed_color [
-      if (member? observed_color other_color = false) [
-        set other_color lput observed_color other_color
-      ]
-    ]
-  ]
-
 end
 
 to move-to-dirt
@@ -436,7 +445,7 @@ to clean-dirt
   if pcolor != white [
     set pcolor white
     set total_dirty total_dirty - 1
-    output-print "cleaned dirt"
+    ;output-print "cleaned dirt"
 
     if dirt_loc_vac != [] [
       let i 0
@@ -459,17 +468,30 @@ to send-messages
   ask vacuums [
     let sending_color color ; set the colour of the vacuum that's gonna send its message
     foreach outgoing_messages [
-       let receiving_color item 0 ?
-       let coord_x item 1 ?
-       let coord_y item 2 ?
-
-       ask vacuums [
-         if own_color = receiving_color [
-           set incoming_messages lput (list sending_color coord_x coord_y) incoming_messages
+       ; if the length of the message is 2, it is a claimed color that is being sent
+       ifelse length ? = 2 [
+         let other_vacuum item 0 ?
+         let claimed_color item 1 ?
+         ask vacuums with [color != claimed_color][
+           set incoming_messages lput (list other_vacuum claimed_color) incoming_messages
          ]
-       ]
 
-       set sent_messages lput (list coord_x coord_y) sent_messages
+         set sent_messages lput (list claimed_color) sent_messages
+
+       ] ; else is has length 3, and is a dirt location that is being sent
+       [
+         let receiving_color item 0 ?
+         let coord_x item 1 ?
+         let coord_y item 2 ?
+
+         ask vacuums [
+           if own_color = receiving_color [
+             set incoming_messages lput (list sending_color coord_x coord_y) incoming_messages
+           ]
+         ]
+
+         set sent_messages lput (list coord_x coord_y) sent_messages
+       ]
     ]
 
     set outgoing_messages []
@@ -513,7 +535,7 @@ dirt_pct
 dirt_pct
 0
 100
-5
+13
 1
 1
 NIL
@@ -818,7 +840,7 @@ dirt_threshold
 dirt_threshold
 0
 10
-7
+3
 1
 1
 NIL
