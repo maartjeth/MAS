@@ -168,6 +168,8 @@ to setup-vacuums
   create-vacuums num_agents
   create-sensors num_agents
 
+
+  ; the vacuums are set up
   ask vacuums [
     set dirt_loc_vac []
     set move_to_dirt []
@@ -176,7 +178,6 @@ to setup-vacuums
     set sent_messages []
   ]
 
-  ; the vacuums are set up
   foreach turtle_list [
     ask vacuum ? [
       set color item ? colours
@@ -305,10 +306,9 @@ to update-beliefs
             ]
           ]
         ]
-
-        if beliefs != [] [
+      ]
+      if beliefs != [] [
           sort-beliefs
-        ]
       ]
       set v v + 1
     ]
@@ -420,8 +420,6 @@ to observe-environment
       [ ask vacuums with [color = vacuum_color] [
           if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
             set outgoing_messages lput (list sending_color x y) outgoing_messages
-            ;print "outgoing mesasges vacuum 0"
-            ;print [outgoing_messages] of vacuum 0
           ]
         ]
       ]
