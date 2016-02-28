@@ -32,8 +32,8 @@
 ; turtle_list
 ; colours
 ; move_around --> intention = string
-; observe_environment --> ? (string)
-; move_to_dirt --> intention = lijst met 1 coordinate
+; observe_environment
+; move_to_dirt --> intention = list with 1 coordinate
 ; int_x
 ; int_y
 ; check_int_x
@@ -47,11 +47,8 @@ globals [total_dirty time x_end y_end clean_all desire_stop turtle_list colours 
 ; The following types of agent (called 'breeds' in NetLogo) are given.
 ;
 ; 1) vacuums: vacuum cleaner agents.
-breed [sensors sensor]
+breed [sensors sensor] ;these are the patches in radius of the vacuums
 breed [vacuums vacuum]
-
-
- ;these are the patches in radius of the vacuums
 
 ; --- Local variables ---
 ; The following local variables are given.
@@ -60,7 +57,9 @@ breed [vacuums vacuum]
 ; 2) desire: the agent's current desire
 ; 3) intention: the agent's current intention
 ; 4) own_color: the agent's belief about its own target color
-; dirt_locations
+; 5) dirt_loc_vac: number of dirt in the environment
+; 6) move_to_dirt: list with 1 coordinate of the dirt who is next to be cleaned
+; 7) observed_dirt
 vacuums-own [beliefs desire intention own_color dirt_loc_vac move_to_dirt observed_dirt]
 sensors-own []
 
@@ -76,7 +75,7 @@ to setup
 
   ; desires
   set clean_all "clean_all"    ; create the desire for the vacuum to clean or not
-  set desire_stop "desire_stop"
+  set desire_stop "desire_stop"; create the desire for the vacuum to stop or not
 
   ; intentions
   set move_around "move_around"
@@ -335,7 +334,7 @@ to observe-environment
       let x pxcor
       let y pycor
 
-      ask vacuums with [color = clean_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+      ask vacuums with [color = clean_color] [
         set observed_dirt lput (list x y) observed_dirt
       ]
     ]
@@ -351,8 +350,8 @@ to move-to-dirt
 
 end
 
-; may want to change this to something neater
 to move-around
+  ; to check of the patch is at a wall of the environment and facing it
   ifelse (  (pycor = max-pycor and (heading > 270 or heading < 90)) or (pycor = min-pycor and (heading > 90 and heading < 270)) or (pxcor = min-pxcor and (heading > 180)) or (pxcor = max-pxcor and (heading < 180)) )  [
     lt 95 ; to avoid loops
     forward 1
@@ -375,7 +374,7 @@ to clean-dirt
   if pcolor != white [
     set pcolor white
     set total_dirty total_dirty - 1
-    ;output-print "cleaned dirt"
+    ;output-print "cleaned dirt" ; debug line
 
     if dirt_loc_vac != [] [
       let i 0
