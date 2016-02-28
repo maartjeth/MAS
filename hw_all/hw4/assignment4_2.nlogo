@@ -60,7 +60,7 @@ globals [total_dirty time x_end y_end clean_all turtle_list colours move_around 
 ;
 ; 1) vacuums: vacuum cleaner agents.
 breed [vacuums vacuum]
-breed [sensors sensor]
+breed [sensors sensor] ;these are the patches in radius of the vacuums
 
 
 ; --- Local variables ---
@@ -405,6 +405,7 @@ to move-to-dirt
 end
 
 to move-around
+  ; to check of the patch is at a wall of the environment and facing it
   ifelse (  (pycor = max-pycor and (heading > 270 or heading < 90)) or (pycor = min-pycor and (heading > 90 and heading < 270)) or (pxcor = min-pxcor and (heading > 180)) or (pxcor = max-pxcor and (heading < 180)) )  [
     lt 95 ; to avoid loops
     forward 1
