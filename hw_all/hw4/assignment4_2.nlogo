@@ -1,3 +1,9 @@
+; Assignment 4, part 2
+; Contributors Group 1:
+; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
+; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
+; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
+
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
 ; Lab assistants: D. Formolo & L. Medeiros
@@ -24,6 +30,26 @@
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
+; x_end
+; y_end
+; clean_all --> desire = string
+; desire_stop --> desire = string
+; turtle_list
+; colours
+; move_around --> intention = string
+; observe_environment
+; int_x
+; int_y
+; check_int_x
+; check_int_y
+; clean_dirt --> intention = string
+; my_color
+; coordinate
+; dirt_locations
+; stop_simulation
+; patch_color
+; coord_dirt
+; desire_stop
 globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
   int_x int_y check_int_x check_int_y clean_dirt my_color coordinate dirt_locations
   stop_simulation patch_color coord_dirt desire_stop]
@@ -47,6 +73,10 @@ breed [sensors sensor]
 ; 5) other_colors: the agent's belief about the target colors of other agents
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
+; 8) sent_messages
+; 9) dirt_loc_vac
+; 10) move_to_dirt
+; 11) observed_dirt
 vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
   dirt_loc_vac move_to_dirt observed_dirt]
 
@@ -88,6 +118,7 @@ to go
   update-intentions
   execute-actions
   send-messages
+
   tick
   set time ticks
 
@@ -310,7 +341,7 @@ to execute-actions
   ; Please note that your agents should perform only one action per tick!
 
   ask vacuums [
-    set my_color own_color ; for some reason I couldn't do this in once
+    set my_color own_color
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
       observe-environment
@@ -346,7 +377,7 @@ to observe-environment
       let sending_color pcolor
 
       ifelse pcolor = my_color [
-        ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+        ask vacuums with [color = my_color] [
           set observed_dirt lput (list x y) observed_dirt
         ]
       ]
@@ -354,11 +385,14 @@ to observe-environment
       [ ask vacuums with [color = my_color] [
           if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
             set outgoing_messages lput (list sending_color x y) outgoing_messages
+            print "outgoing mesasges vacuum 0"
+            print [outgoing_messages] of vacuum 0
           ]
         ]
       ]
     ]
   ]
+
 end
 
 to move-to-dirt
@@ -370,7 +404,6 @@ to move-to-dirt
 
 end
 
-; may want to change this to something neater
 to move-around
   ifelse (  (pycor = max-pycor and (heading > 270 or heading < 90)) or (pycor = min-pycor and (heading > 90 and heading < 270)) or (pxcor = min-pxcor and (heading > 180)) or (pxcor = max-pxcor and (heading < 180)) )  [
     lt 95 ; to avoid loops
@@ -394,7 +427,7 @@ to clean-dirt
   if pcolor != white [
     set pcolor white
     set total_dirty total_dirty - 1
-    output-print "cleaned dirt"
+    ;output-print "cleaned dirt"
 
     if dirt_loc_vac != [] [
       let i 0
@@ -434,9 +467,6 @@ to send-messages
   ]
 
 end
-
-; incoming messages --> kleur van turtle die verstuurd heeft niet goed
-; incoming messages --> drie keer dezelfde patch, terwijl twee verschillende
 @#$#@#$#@
 GRAPHICS-WINDOW
 786
@@ -474,7 +504,7 @@ dirt_pct
 dirt_pct
 0
 100
-12
+4
 1
 1
 NIL
@@ -540,7 +570,7 @@ num_agents
 num_agents
 2
 7
-2
+6
 1
 1
 NIL
