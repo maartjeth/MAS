@@ -88,11 +88,11 @@ to setup
 
   ; desires
   set clean_all "clean_all"    ; create the desire for the vacuum to clean or not
-  set stop_now "stop_now"; create the desire for the vacuum to stop or not
+  set stop_now "stop_now"      ; create the desire for the vacuum to stop or not
 
   ; intentions
   set move_around "move_around"                  ; create the intention to move around when no dirt is added to it's beliefs yet
-  set observe_environment "observe_environment"  ; ceate the intention to observe the environment everytime the agent has moved
+  set observe_environment "observe_environment"  ; create the intention to observe the environment everytime the agent has moved
   set clean_dirt "clean_dirt"                    ; create the intention to clean dirt when the agent is at a dirty spot of it's color
 
   setup-patches
