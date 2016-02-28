@@ -1,3 +1,9 @@
+; Assignment 4, part 3
+; Contributors Group 1:
+; Romy Blankendaal (10680233, romy.blankendaal@gmail.com)
+; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
+; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
+
 ; UVA/VU - Multi-Agent Systems
 ; Lecturers: T. Bosse & M.C.A. Klein
 ; Lab assistants: D. Formolo & L. Medeiros
@@ -25,9 +31,27 @@ extensions [table]
 ;
 ; 1) total_dirty: this variable represents the amount of dirty cells in the environment.
 ; 2) time: the total simulation time.
+; x_end
+; y_end
+; clean_all --> desire = string
+; desire_stop --> desire = string
+; turtle_list
+; colours
+; move_around --> intention = string
+; observe_environment
+; int_x
+; int_y
+; check_int_x
+; check_int_y
+; clean_dirt --> intention = string
+; my_color
+; coordinate
+; dirt_locations
+; stop_simulation
+; desire_stop
 globals [total_dirty time x_end y_end clean_all turtle_list colours move_around observe_environment
   int_x int_y check_int_x check_int_y clean_dirt my_color coordinate dirt_locations
-  stop_simulation patch_color coord_dirt desire_stop]
+  stop_simulation desire_stop ]
 
 
 ; --- Agents ---
@@ -35,7 +59,7 @@ globals [total_dirty time x_end y_end clean_all turtle_list colours move_around 
 ;
 ; 1) vacuums: vacuum cleaner agents.
 breed [vacuums vacuum]
-breed [sensors sensor]
+breed [sensors sensor] ;these are the patches in radius of the vacuums
 
 
 ; --- Local variables ---
@@ -48,8 +72,13 @@ breed [sensors sensor]
 ; 5) other_colors: the agent's belief about the target colors of other agents
 ; 6) outgoing_messages: list of messages sent by the agent to other agents
 ; 7) incoming_messages: list of messages received by the agent from other agents
+; 8) sent_messages
+; 9) dirt_loc_vac
+; 10) move_to_dirt
+; 11) observed_dirt
+; 12) dirt_dict
 vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
-  dirt_loc_vac move_to_dirt observed_dirt dirt_dict update_dirt_loc]
+  own_dirt_count move_to_dirt observed_dirt dirt_dict]
 
 
 ; --- Setup ---
@@ -91,13 +120,6 @@ to go
   execute-actions
   send-messages
 
-  update-dirt-loc
-
-  ask vacuums [
-    print "dirt loc vac"
-    print dirt_loc_vac
-  ]
-
   tick
   set time ticks
 
@@ -128,6 +150,19 @@ to setup-patches
      ask n-of total_dirt_vacuum patches with [pcolor = white] [set pcolor item ? colours]
   ]
 
+  set dirt_locations table:make
+  foreach colours [
+    table:put dirt_locations ? 0
+  ]
+  ask patches [
+    foreach colours [
+      if pcolor = ? [
+        let counter table:get dirt_locations ?
+        table:put dirt_locations ? (counter + 1)
+      ]
+    ]
+  ]
+
 end
 
 
@@ -141,7 +176,7 @@ to setup-vacuums
 
 
   ask vacuums [
-    set dirt_loc_vac []
+    set own_dirt_count 0
     set move_to_dirt []
     set outgoing_messages []
     set incoming_messages []
@@ -149,7 +184,6 @@ to setup-vacuums
     set other_color []
     set color black
     set own_color color
-    set update_dirt_loc false
     set label who ; delete
     set label-color blue ; delete
     setxy random-xcor random-ycor
@@ -167,33 +201,14 @@ to setup-vacuums
     ]
   ]
 
-  ;let i 0
   ; set dict table for each vacuum per observed color to 0
   ask vacuums [
     set dirt_dict table:make
     foreach colours [
       table:put dirt_dict ? 0
     ]
-    ;set i i + 1
   ]
 
-  ;let v 1
-  ;ask vacuum v [
-  ;  let counter table:get dirt_dict 15
-  ;  table:put dirt_dict 15 counter + 1
-  ;]
-
-  ;ask vacuums [
-  ;  print "DIRT DICT"
-  ;  print dirt_dict
-  ;]
-
-
-
-  ask patches [
-    set patch_color pcolor
-    set coord_dirt (list pxcor pycor)
-  ]
 end
 
 
@@ -234,6 +249,11 @@ to update-beliefs
 
   let v 0
   ask vacuums[
+
+      ; if your own color is not your belief about what your color is, update it
+      if own_color != color [
+        set own_color color
+      ]
 
       ; put the dirt you've observed yourself into your beliefs
       if observed_dirt != [] and own_color != black [
@@ -291,9 +311,9 @@ to update-desires
   ; Keep in mind that now you have more than one agent.
 
   ask vacuums [
-    if dirt_loc_vac = [] and own_color != black[
+    if own_dirt_count = 0 and own_color != black [
       set desire desire_stop ; stop if you chose a color and all the dirt of that color is cleaned
-   ]
+    ]
   ]
 end
 
@@ -338,7 +358,7 @@ to execute-actions
 
   let v 0
   ask vacuums [
-    set my_color own_color ; for some reason I couldn't do this in once
+    set my_color own_color
     ; observing environment --> adding pieces of dirt in radius to belief base
     if intention = observe_environment [
       print "observe environment"
@@ -377,8 +397,29 @@ to observe-environment [v]
     let y_patch pycor
 
     ifelse [color] of vacuum v = black [ ; then you don't have a colour yet, so you need to count patches in your surroundings
-      if observed_color != white [ ; increase counter in dict
-        ask vacuum v [
+
+      ask vacuum v [
+        ; if all the other agents have claimed a color, claim the last color
+        if length other_color = num_agents - 1[
+          foreach turtle_list[
+            if (member? item ? colours other_color = false)[
+              set color item ? colours
+              ask sensor (v + num_agents) [
+                  set color lput 100 extract-rgb item ? colours
+              ]
+              send-color-message observed_color ; send the observed color to the other age
+              set observed_dirt [] ; now you can start counting the observed dirt again
+
+              set own_dirt_count table:get dirt_locations item ? colours
+            ]
+          ]
+        ]
+
+
+        if observed_color != white [ ; increase counter in dict
+
+
+
           if (member? (list x_patch y_patch) observed_dirt = false) [ ; check that you haven't seen the piece of dirt before
             set observed_dirt lput (list x_patch y_patch) observed_dirt ; add this piece to the pieces you've seen
             let counter table:get [dirt_dict] of vacuum v observed_color
@@ -392,13 +433,14 @@ to observe-environment [v]
             if counter >= dirt_threshold [
               if (member? observed_color other_color = false) [ ; if one of the others don't take care of this colour yet
                 set color observed_color
-                set own_color observed_color
                 ask sensor (v + num_agents) [
                   set color lput 100 extract-rgb observed_color
                 ]
                 send-color-message observed_color ; send the observed color to the other age
                 set observed_dirt [] ; now you can start counting the observed dirt again
-                set update_dirt_loc true
+
+                set own_dirt_count table:get dirt_locations observed_color
+
               ]
             ]
             print v
@@ -415,7 +457,7 @@ to observe-environment [v]
         let sending_color pcolor
 
         ifelse pcolor = my_color [
-          ask vacuums with [color = my_color] [ ; bit strange that I call vacuum, patch, vacuum, but for as far as I know this is the only way to get this? Nicer solutions welcome :)
+          ask vacuums with [color = my_color] [
             set observed_dirt lput (list x y) observed_dirt
           ]
         ]
@@ -424,21 +466,6 @@ to observe-environment [v]
               set outgoing_messages lput (list sending_color x y) outgoing_messages
             ]
           ]
-        ]
-      ]
-    ]
-  ]
-end
-
-to update-dirt-loc
-  ask patches [
-    set patch_color pcolor
-    set coord_dirt (list pxcor pycor)
-
-    ask vacuums [
-      if update_dirt_loc = true [
-        if patch_color = own_color [
-          set dirt_loc_vac lput coord_dirt dirt_loc_vac
         ]
       ]
     ]
@@ -468,8 +495,8 @@ to move-to-dirt
 
 end
 
-; may want to change this to something neater
 to move-around
+  ; to check of the patch is at a wall of the environment and facing it
   ifelse (  (pycor = max-pycor and (heading > 270 or heading < 90)) or (pycor = min-pycor and (heading > 90 and heading < 270)) or (pxcor = min-pxcor and (heading > 180)) or (pxcor = max-pxcor and (heading < 180)) )  [
     lt 95 ; to avoid loops
     forward 1
@@ -494,14 +521,8 @@ to clean-dirt
     set total_dirty total_dirty - 1
     output-print "cleaned dirt"
 
-    if dirt_loc_vac != [] [
-      let i 0
-      foreach dirt_loc_vac [
-        if item 0 ? = pxcor and item 1 ? = pycor [
-          set dirt_loc_vac remove-item i dirt_loc_vac
-        ]
-        set i i + 1
-      ]
+    if own_dirt_count != 0 [
+      set own_dirt_count own_dirt_count - 1
     ]
   ]
 end
@@ -594,9 +615,9 @@ NIL
 
 BUTTON
 389
-101
+102
 772
-134
+135
 NIL
 go
 T
