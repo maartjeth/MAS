@@ -314,37 +314,49 @@ to update-intentions
   ; You should update your agent's intentions here.
   let vac 0
   ask vacuums [
-    ifelse desire = clean_all [
-      if beliefs = [] [
-        ifelse intention = [] [
-          set intention observe_environment
-        ][
-          ifelse intention = observe_environment [
-            set intention move_around
-          ]
-          [ set intention observe_environment ]
-        ]
-      ]
-
-      ; if you believe there is dirt somethere: move to it, or clean it when you are there
-      if beliefs != [] [
-        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
-          ifelse intention = move_to_dirt [
-            set intention observe_environment ]  ; you need to do this to make sure it's checking out its environment as well while running aorund
-
-          [ set move_to_dirt item 0 beliefs
-            set intention move_to_dirt
-            set int_x item 0 intention
-            set int_y item 1 intention
-            facexy int_x int_y
-          ]
-        ]
-        [ set intention clean_dirt ]
-      ]
+    ; if you have new messages to send, get the intention to send messages
+    ifelse intention = observe_environment and outgoing_messages != [] [
+      set intention send_message
     ]
-    ; if you don't have the desire to clean anymore, you have no more intentions
-    [ set intention [] ]
-    set vac vac + 1
+    ; else determine other possible intentions
+    [
+
+      ifelse desire = clean_all [
+        if beliefs = [] [
+          ifelse intention = [] [
+            set intention observe_environment
+          ][
+            ifelse intention = send_message [
+              set intention move_around]
+            [
+              ifelse intention = observe_environment [
+                set intention move_around
+              ]
+              [ set intention observe_environment ]
+            ]
+          ]
+        ]
+
+        ; if you believe there is dirt somethere: move to it, or clean it when you are there
+        if beliefs != [] [
+          ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
+            ifelse intention = move_to_dirt [
+              set intention observe_environment ]  ; you need to do this to make sure it's checking out its environment as well while running aorund
+
+            [ set move_to_dirt item 0 beliefs
+              set intention move_to_dirt
+              set int_x item 0 intention
+              set int_y item 1 intention
+              facexy int_x int_y
+            ]
+          ]
+          [ set intention clean_dirt ]
+        ]
+      ]
+      ; if you don't have the desire to clean anymore, you have no more intentions
+      [ set intention [] ]
+      set vac vac + 1
+    ]
   ]
 end
 
@@ -402,8 +414,8 @@ to observe-environment
       [ ask vacuums with [color = vacuum_color] [
           if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
             set outgoing_messages lput (list sending_color x y) outgoing_messages
-            print "outgoing mesasges vacuum 0"
-            print [outgoing_messages] of vacuum 0
+            ;print "outgoing mesasges vacuum 0"
+            ;print [outgoing_messages] of vacuum 0
           ]
         ]
       ]
@@ -467,22 +479,24 @@ to send-messages
   ; Note that this could be seen as a special case of executing actions, but for conceptual clarity it has been put in a separate method.
 
   ask vacuums [
-    let sending_color color ; set the colour of the vacuum that's gonna send its message
-    foreach outgoing_messages [
-       let receiving_color item 0 ?
-       let coord_x item 1 ?
-       let coord_y item 2 ?
+    if intention = send_message [
+      let sending_color color ; set the colour of the vacuum that's gonna send its message
+      foreach outgoing_messages [
+         let receiving_color item 0 ?
+         let coord_x item 1 ?
+         let coord_y item 2 ?
 
-       ask vacuums [
-         if own_color = receiving_color [
-           set incoming_messages lput (list sending_color coord_x coord_y) incoming_messages
+         ask vacuums [
+           if own_color = receiving_color [
+             set incoming_messages lput (list sending_color coord_x coord_y) incoming_messages
+           ]
          ]
-       ]
 
-       set sent_messages lput (list coord_x coord_y) sent_messages
+         set sent_messages lput (list coord_x coord_y) sent_messages
+      ]
+
+      set outgoing_messages []
     ]
-
-    set outgoing_messages []
   ]
 
 end
@@ -523,7 +537,7 @@ dirt_pct
 dirt_pct
 0
 100
-4
+3
 1
 1
 NIL
@@ -589,7 +603,7 @@ num_agents
 num_agents
 2
 7
-6
+2
 1
 1
 NIL
@@ -748,7 +762,7 @@ MONITOR
 385
 409
 Outgoing messages vacuum 1
-sort ([outgoing_messages] of vacuum 0)
+[outgoing_messages] of vacuum 0
 17
 1
 11
@@ -770,7 +784,7 @@ MONITOR
 389
 553
 Outgoing messages vacuum 2
-sort ([outgoing_messages] of vacuum 1)
+[outgoing_messages] of vacuum 1
 17
 1
 11
@@ -792,7 +806,7 @@ MONITOR
 389
 698
 Outgoing messages vacuum 3
-sort ([outgoing_messages] of vacuum 2)
+[outgoing_messages] of vacuum 2
 17
 1
 11
