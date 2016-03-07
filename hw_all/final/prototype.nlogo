@@ -105,7 +105,7 @@ to setup-rooms
     set num_rooms num_rooms - 1
   ]
 
-  ; room 1 (left corner)
+  ; room 1 (left lower corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 ] [
     set pcolor yellow
   ]
@@ -115,8 +115,28 @@ to setup-rooms
     set pcolor green
   ]
 
-  ; room 3 (right corner)
+  ; room 3 (right lower corner)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 - 5] [
+    set pcolor yellow
+  ]
+
+  ; room 4 (right middle)
+  ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 - 5 and pycor < (max-pycor - min-pycor) / 2 + 5] [
+    set pcolor pink
+  ]
+
+  ; room 5 (right upper corner)
+  ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 + 5 and pycor < max-pycor] [
+    set pcolor yellow
+  ]
+
+  ; room 6 (left middle)
+  ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 and pycor < (max-pycor - min-pycor) / 2 + 12 ] [
+    set pcolor pink
+  ]
+
+  ; room 7 (left upper corner)
+  ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 + 12 and pycor < max-pycor] [
     set pcolor yellow
   ]
 
