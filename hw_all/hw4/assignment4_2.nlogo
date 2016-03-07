@@ -82,6 +82,12 @@ breed [sensors sensor]
 vacuums-own [beliefs desire intention own_color other_color outgoing_messages incoming_messages sent_messages
   dirt_loc_vac move_to_dirt observed_dirt int_x int_y check_int_x check_int_y]
 
+; Final note:
+; In the template for each vacuum the outgoing_messages was shown.
+; Because we empty the outgoing_messages before the monitor can display them, it would diplay nothing.
+; Instead, we now show sent_messages: a list of all messages that were ever sent.
+; You can see a new outgoing message was sent the moment the sent_messages list gets longer.
+
 
 ; --- Setup ---
 to setup
@@ -162,6 +168,8 @@ to setup-vacuums
   create-vacuums num_agents
   create-sensors num_agents
 
+
+  ; the vacuums are set up
   ask vacuums [
     set dirt_loc_vac []
     set move_to_dirt []
@@ -170,7 +178,6 @@ to setup-vacuums
     set sent_messages []
   ]
 
-  ; the vacuums are set up
   foreach turtle_list [
     ask vacuum ? [
       set color item ? colours
@@ -414,8 +421,6 @@ to observe-environment
       [ ask vacuums with [color = vacuum_color] [
           if ( (member? (list x y) outgoing_messages = false) and (member? (list x y) sent_messages = false)) [
             set outgoing_messages lput (list sending_color x y) outgoing_messages
-            ;print "outgoing mesasges vacuum 0"
-            ;print [outgoing_messages] of vacuum 0
           ]
         ]
       ]
@@ -761,8 +766,8 @@ MONITOR
 364
 385
 409
-Outgoing messages vacuum 1
-[outgoing_messages] of vacuum 0
+Sent messages vacuum 1
+[sent_messages] of vacuum 0
 17
 1
 11
@@ -783,8 +788,8 @@ MONITOR
 508
 389
 553
-Outgoing messages vacuum 2
-[outgoing_messages] of vacuum 1
+Sent messages vacuum 2
+[sent_messages] of vacuum 1
 17
 1
 11
@@ -805,8 +810,8 @@ MONITOR
 653
 389
 698
-Outgoing messages vacuum 3
-[outgoing_messages] of vacuum 2
+Sent messages vacuum 3
+[sent_messages] of vacuum 2
 17
 1
 11
