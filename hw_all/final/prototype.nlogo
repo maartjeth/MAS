@@ -8,7 +8,8 @@ extensions [table]
 
 globals [time
          room_dict
-
+         x
+         y
         ]
 
 
@@ -17,7 +18,9 @@ globals [time
 ;
 ; 1) vacuums: vacuum cleaner agents.
 breed [rooms room]
+breed [customers customer]
 breed [vacuums vacuum]
+
 
 
 ; --- Local variables ---
@@ -35,6 +38,7 @@ to setup
   set time 0
   setup-patches
   setup-rooms
+  setup-customers
   setup-ticks
 end
 
@@ -139,15 +143,17 @@ to setup-rooms
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 + 12 and pycor < max-pycor] [
     set pcolor yellow
   ]
-
-
-
-
-
-
-
 end
 
+to setup-customers
+  create-customers num_cust
+  ask customers [
+    set shape "person"
+    setxy random-pxcor random-pycor ; now they're still places on the walls
+    facexy random-xcor random-ycor
+    set color red
+  ]
+end
 
 ; --- Setup vacuums ---
 to setup-vacuums
@@ -233,6 +239,21 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+7
+54
+179
+87
+num_cust
+num_cust
+0
+300
+189
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
