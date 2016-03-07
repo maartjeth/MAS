@@ -4,10 +4,9 @@
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
 ; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
 
-extensions [table]
 
 globals [time
-         room_dict
+
 
         ]
 
@@ -66,64 +65,24 @@ to setup-patches
   ]
 
   ; middle path
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 or pxcor = (max-pxcor - min-pxcor) / 2 + 3] [
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2] [
     set pcolor black
-  ]
-
-  ; left rooms
-  ask patches with [pycor = (max-pycor - min-pycor) / 2 - 5 or pycor = (max-pycor - min-pycor) / 2 + 5 and ( pxcor > (max-pxcor - min-pxcor) / 2 + 3)] [
-    set pcolor black
-  ]
-
-  ; right rooms
-  ask patches with [pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 12 and ( pxcor < (max-pxcor - min-pxcor) / 2 - 3)] [
-    set pcolor black
-  ]
-
-  ; doors outside
-  ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor or pycor = min-pycor)] [
-    set pcolor red
-  ]
-
-  ; doors in environment - right side
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and (pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 10 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
-    set pcolor blue
-  ]
-
-  ; doors in environment - left side
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and (pycor = (max-pycor - min-pycor) / 2 + 3 or pycor = (max-pycor - min-pycor) / 2 + 14 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
-    set pcolor blue
   ]
 end
 
 to setup-rooms
-  let num_rooms 7 ; in the current prototype we have seven rooms
-
-  set room_dict table:make
-  while [num_rooms > 0] [
-    table:put room_dict num_rooms 0
-    set num_rooms num_rooms - 1
+  create-rooms 7
+  ask rooms [
+    set shape "square"
+    set color green
   ]
 
-  ; room 1 (left corner)
-  ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 ] [
-    set pcolor yellow
+  ask room 1 [
+    set size 4
+    set color yellow
+    set xcor 4
+    set ycor 13
   ]
-
-  ; room 2 (path)
-  ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 - 3 and pxcor < (max-pxcor - min-pxcor) / 2 + 3 and pycor > min-pycor and pycor < max-pycor] [
-    set pcolor green
-  ]
-
-  ; room 3 (right corner)
-  ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 - 5] [
-    set pcolor yellow
-  ]
-
-
-
-
-
 
 
 end
@@ -198,10 +157,10 @@ ticks
 30.0
 
 BUTTON
-8
-15
-75
-48
+16
+24
+83
+57
 NIL
 setup
 NIL
