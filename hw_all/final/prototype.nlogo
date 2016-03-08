@@ -10,6 +10,7 @@ globals [time
          room_dict
          x
          y
+         steal-item
         ]
 
 
@@ -19,7 +20,8 @@ globals [time
 ; 1) vacuums: vacuum cleaner agents.
 breed [rooms room]
 breed [customers customer]
-breed [vacuums vacuum]
+breed [cops cop]
+breed [thieves thief]
 
 
 
@@ -29,7 +31,9 @@ breed [vacuums vacuum]
 ; 1) beliefs: the agent's belief base about locations that contain dirt
 ; 2) desire: the agent's current desire
 ; 3) intention: the agent's current intention
-vacuums-own [beliefs desire intention]
+cops-own [beliefs desire intention]
+
+thieves-own [ ]
 
 
 ; --- Setup ---
@@ -146,12 +150,35 @@ to setup-rooms
 end
 
 to setup-customers
-  create-customers num_cust
+  create-customers num_customers
   ask customers [
     set shape "person"
-    setxy random-pxcor random-pycor ; now they're still places on the walls
-    facexy random-xcor random-ycor
     set color red
+    move-to one-of patches with [pcolor != black and not any? customers-on self]
+
+  ]
+end
+
+to place-item-manually
+  if mouse-down?
+  [
+    ask patch round mouse-xcor round mouse-ycor [
+    set steal-item "yes" ;patches cannot have a 'shape', therefor the items are just a orange square
+    set pcolor orange
+  ]
+  stop
+]
+end
+
+to place-cop-manually
+  if mouse-down?
+  [
+    create-cops 1 [
+      setxy mouse-xcor mouse-ycor
+      set color black
+      set shape "person"
+      ]
+    stop
   ]
 end
 
@@ -164,6 +191,7 @@ end
 ; --- Setup ticks ---
 to setup-ticks
   ; In this method you may start the tick counter.
+  reset-ticks
 end
 
 
@@ -197,9 +225,9 @@ to execute-actions
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-210
+376
 10
-753
+919
 574
 -1
 -1
@@ -241,19 +269,70 @@ NIL
 1
 
 SLIDER
-7
-54
-179
-87
-num_cust
-num_cust
+9
+133
+181
+166
+num_customers
+num_customers
 0
 300
-189
+73
 1
 1
 NIL
 HORIZONTAL
+
+BUTTON
+8
+54
+75
+88
+start
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+78
+15
+243
+48
+NIL
+place-item-manually
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+78
+55
+244
+88
+NIL
+place-cop-manually
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -598,7 +677,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.3
+NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
