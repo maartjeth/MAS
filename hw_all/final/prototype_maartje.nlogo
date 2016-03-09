@@ -30,7 +30,9 @@ breed [customers customer]
 ; 1) beliefs: the agent's belief base about locations that contain dirt
 ; 2) desire: the agent's current desire
 ; 3) intention: the agent's current intention
-cops-own [beliefs desire intention view]
+cops-own [beliefs desire intention view vision_radius]
+; view = how many patches forward
+; vision_radius = all patches he can see
 
 thieves-own [ ]
 
@@ -51,7 +53,6 @@ to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
   if ticks = 0 [
-
     setup-vision-radii
   ]
 
@@ -150,7 +151,6 @@ to setup-rooms
     table:put room_dict list pxcor pycor 7
   ]
 
-  print room_dict
 
 end
 
@@ -183,6 +183,7 @@ to place-cop-manually
       set color black
       set shape "person"
       set view 90
+      set vision_radius []
       ]
     stop
   ]
@@ -191,11 +192,23 @@ end
 to setup-vision-radii
   ; set up radius cops
   ask cops [
-    print view
-    print radius-cops
     ; here we still need to add that the patches need to belong to the same room the cop is in
+
+    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+    let c who
+
+
     ask patches in-cone radius-cops view [
-      set pcolor blue
+      let patch_coord list pxcor pycor
+      let room_patch table:get room_dict patch_coord
+
+      if room_patch = cop_room [
+        ask cop c [
+          print patch_coord
+          set vision_radius lput (patch_coord) vision_radius
+        ]
+        set pcolor 99
+      ]
     ]
   ]
 
