@@ -30,7 +30,9 @@ breed [customers customer]
 ; 1) beliefs: the agent's belief base about locations that contain dirt
 ; 2) desire: the agent's current desire
 ; 3) intention: the agent's current intention
-cops-own [beliefs desire intention view]
+cops-own [beliefs desire intention view vision_radius]
+; view = how many patches forward
+; vision_radius = all patches he can see
 
 thieves-own [ ]
 
@@ -51,7 +53,6 @@ to go
   ; This method executes the main processing cycle of an agent.
   ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
   if ticks = 0 [
-
     setup-vision-radii
   ]
 
@@ -109,48 +110,48 @@ to setup-patches
 end
 
 to setup-rooms
-  let num_rooms 7 ; in the current prototype we have seven rooms
 
   set room_dict table:make
-  while [num_rooms > 0] [
-    table:put room_dict num_rooms 0
-    set num_rooms num_rooms - 1
+  ask patches [
+    table:put room_dict list pxcor pycor 0
   ]
 
   ; room 1 (left lower corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 ] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 1
   ]
 
   ; room 2 (path)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 - 3 and pxcor < (max-pxcor - min-pxcor) / 2 + 3 and pycor > min-pycor and pycor < max-pycor] [
-    set pcolor green
+    table:put room_dict list pxcor pycor 2
   ]
 
   ; room 3 (right lower corner)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 - 5] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 3
   ]
 
   ; room 4 (right middle)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 - 5 and pycor < (max-pycor - min-pycor) / 2 + 5] [
-    set pcolor pink
+    table:put room_dict list pxcor pycor 4
   ]
 
   ; room 5 (right upper corner)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 + 5 and pycor < max-pycor] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 5
   ]
 
   ; room 6 (left middle)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 and pycor < (max-pycor - min-pycor) / 2 + 12 ] [
-    set pcolor pink
+    table:put room_dict list pxcor pycor 6
   ]
 
   ; room 7 (left upper corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 + 12 and pycor < max-pycor] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 7
   ]
+
+
 end
 
 to setup-customers
@@ -182,6 +183,7 @@ to place-cop-manually
       set color black
       set shape "person"
       set view 90
+      set vision_radius []
       ]
     stop
   ]
@@ -190,11 +192,23 @@ end
 to setup-vision-radii
   ; set up radius cops
   ask cops [
-    print view
-    print radius-cops
     ; here we still need to add that the patches need to belong to the same room the cop is in
+
+    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+    let c who
+
+
     ask patches in-cone radius-cops view [
-      set pcolor blue
+      let patch_coord list pxcor pycor
+      let room_patch table:get room_dict patch_coord
+
+      if room_patch = cop_room [
+        ask cop c [
+          print patch_coord
+          set vision_radius lput (patch_coord) vision_radius
+        ]
+        set pcolor 99
+      ]
     ]
   ]
 
