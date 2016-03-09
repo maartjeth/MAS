@@ -15,9 +15,8 @@ globals [time
 
 
 ; --- Agents ---
-; The following types of agent (called 'breeds' in NetLogo) are given. (Note: in Assignment 3.3, you could implement the garbage can as an agent as well.)
+; The following types of agent (called 'breeds' in NetLogo) are given.
 ;
-; 1) vacuums: vacuum cleaner agents.
 breed [cops cop]
 breed [thieves thief]
 breed [customers customer]
@@ -25,15 +24,17 @@ breed [customers customer]
 
 
 ; --- Local variables ---
-; The following local variables are given. (Note: you might need additional local variables (e.g., to keep track of how many pieces of dirt are in the bag in Assignment 3.3). You could represent this as another belief, but it this is inconvenient you may also use another name for it.)
+; The following local variables are given.
 ;
-; 1) beliefs: the agent's belief base about locations that contain dirt
-; 2) desire: the agent's current desire
-; 3) intention: the agent's current intention
-cops-own [beliefs desire intention view]
 
-thieves-own [ ]
+customers-own [ move_around ]
 
+cops-own [beliefs desire intention view vision_radius strength speed radius ]
+; view = how many patches forward
+; vision_radius = all patches he can see
+
+thieves-own [ belief_seeing_cop belief_room belief_outside_door desire intention strength speed radius items steal flight
+  move_around observe_environment steal_item drop_item escape]
 
 ; --- Setup ---
 to setup
@@ -49,17 +50,267 @@ end
 ; --- Main processing cycle ---
 to go
   ; This method executes the main processing cycle of an agent.
-  ; For Assignment 3, this involves updating desires, beliefs and intentions, and executing actions (and advancing the tick counter).
   if ticks = 0 [
-
     setup-vision-radii
+    setup-thieves
+    setup-cops
   ]
-
   update-desires
   update-beliefs
   update-intentions
   execute-actions
   tick
+end
+
+
+to setup-customers
+  create-customers num_customers
+  ask customers [
+    set shape "person"
+    set color red
+    move-to one-of patches with [pcolor != black and not any? customers-on self]
+    ; customers have only one intention
+    set move_around "move_around"
+
+  ]
+end
+
+to setup-thieves
+ask thieves [
+  ; desires
+  set steal "steal"
+  set flight "flight"
+
+  ; intentions
+  set move_around "move_around"
+  set observe_environment "observe_environment"
+  set steal_item "steal_item"
+  set drop_item "drop_item"
+  set escape "escape"
+
+]
+end
+
+to setup-cops
+ask cops [
+
+]
+end
+
+to place-item-manually
+  if mouse-down?
+  [
+    ask patch round mouse-xcor round mouse-ycor [
+    set steal-item "yes" ;patches cannot have a 'shape', therefor the items are just a orange square
+    set pcolor orange
+  ]
+  stop
+]
+end
+
+to place-cop-manually
+  if mouse-down?
+  [
+    create-cops 1 [
+      setxy mouse-xcor mouse-ycor
+      set color black
+      set shape "person"
+      set view 90
+      set vision_radius []
+      ]
+    stop
+  ]
+end
+
+to place-thief-manually
+  if mouse-down?
+  [
+    create-thieves 1 [
+      setxy mouse-xcor mouse-ycor
+      set color green
+      set shape "person"
+      ]
+    stop
+  ]
+end
+
+
+to setup-vision-radii
+  ; set up radius cops
+  ask cops [
+    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+    let c who
+
+
+    ask patches in-cone radius-cops view [
+      let patch_coord list pxcor pycor
+      let room_patch table:get room_dict patch_coord
+
+      if room_patch = cop_room [
+        ask cop c [
+          print patch_coord
+          set vision_radius lput (patch_coord) vision_radius
+        ]
+        set pcolor 99 ;light blue
+      ]
+    ]
+  ]
+
+end
+
+
+; --- Setup ticks ---
+to setup-ticks
+  ; In this method you may start the tick counter.
+  reset-ticks
+end
+
+; --- Setup beliefs ---
+to setup-beliefs
+  ask cops [
+
+  ]
+
+  ask thieves [
+     set belief_seeing_cop []
+     set belief_room []
+     set belief_outside_door []
+  ]
+
+end
+
+; --- Setup desires ---
+to setup-desires
+  ask cops [
+
+  ]
+
+  ask thieves [
+    set desire steal_item
+  ]
+end
+
+; --- Setup intentions ---
+to setup-intentions
+  ask cops [
+    set intention []
+  ]
+
+  ask thieves [
+    set intention []
+  ]
+end
+
+; --- Update desires ---
+to update-desires
+  ; You should update your agent's desires here.
+  ask cops [
+
+  ]
+
+  ask thieves [
+    ;if the thief has an item or has an items and sees a cop, the thief will flight.
+    ifelse items != [] or (items != [] and belief_seeing_cop != []) [
+      set desire flight
+    ]
+    [
+      set desire steal_item
+    ]
+  ]
+end
+
+
+; --- Update beliefs ---
+to update-beliefs
+ ; You should update your agent's beliefs here.
+ let t 0
+ ask thieves [
+
+   ;if seeing cop: store cop with speed, strength and location (for number of ticks)
+
+   ;store room (and door?)
+
+   ;if outside door, store it
+
+   set t t + 1
+ ]
+
+ let c 0
+ ask cops [
+
+
+  set c c + 1
+ ]
+
+end
+
+
+; --- Update intentions ---
+to update-intentions
+  ; You should update your agent's intentions here.
+  ; The agent's intentions should be dependent on its beliefs and desires.
+  let th 0
+  ask thieves [
+    ifelse intention = observe_environment and belief_seeing_cop = [] [
+      set intention move_around
+    ]
+    [
+
+      ifelse desire = steal_item [
+
+        ;if the thief sees no agent (note: perhaps adjust later to: or has seen agent but while ago)
+        if belief_seeing_cop = [] [
+          set intention move_around
+
+        ]
+
+        ifelse desire = flight [
+
+        ][
+
+        ]
+
+
+        set th th + 1
+      ]
+      []
+    ]
+
+  ]
+
+
+  let co 0
+  ask cops [
+
+
+
+    set co co + 1
+  ]
+end
+
+
+; --- Execute actions ---
+to execute-actions
+  ; Here you should put the code related to the actions performed by your agent
+
+end
+
+to move-around
+  ; to check if turtle reaches a wall
+  ifelse ( patch-ahead pcolor = black ) [
+    lt (random 180) - 45 ; to avoid loops
+    forward 1
+  ]
+  [ forward 1
+    ]
+end
+
+to pickup-item
+  ; if you found an item, steal it
+  if pcolor != white [
+    set pcolor white
+    set items items + 1
+    ]
 end
 
 
@@ -109,143 +360,52 @@ to setup-patches
 end
 
 to setup-rooms
-  let num_rooms 7 ; in the current prototype we have seven rooms
 
   set room_dict table:make
-  while [num_rooms > 0] [
-    table:put room_dict num_rooms 0
-    set num_rooms num_rooms - 1
+  ask patches [
+    table:put room_dict list pxcor pycor 0
   ]
 
   ; room 1 (left lower corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 ] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 1
   ]
 
   ; room 2 (path)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 - 3 and pxcor < (max-pxcor - min-pxcor) / 2 + 3 and pycor > min-pycor and pycor < max-pycor] [
-    set pcolor green
+    table:put room_dict list pxcor pycor 2
   ]
 
   ; room 3 (right lower corner)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 - 5] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 3
   ]
 
   ; room 4 (right middle)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 - 5 and pycor < (max-pycor - min-pycor) / 2 + 5] [
-    set pcolor pink
+    table:put room_dict list pxcor pycor 4
   ]
 
   ; room 5 (right upper corner)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 + 5 and pycor < max-pycor] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 5
   ]
 
   ; room 6 (left middle)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 and pycor < (max-pycor - min-pycor) / 2 + 12 ] [
-    set pcolor pink
+    table:put room_dict list pxcor pycor 6
   ]
 
   ; room 7 (left upper corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 + 12 and pycor < max-pycor] [
-    set pcolor yellow
+    table:put room_dict list pxcor pycor 7
   ]
-end
-
-to setup-customers
-  create-customers num_customers
-  ask customers [
-    set shape "person"
-    set color red
-    move-to one-of patches with [pcolor != black and not any? customers-on self]
-
-  ]
-end
-
-to place-item-manually
-  if mouse-down?
-  [
-    ask patch round mouse-xcor round mouse-ycor [
-    set steal-item "yes" ;patches cannot have a 'shape', therefor the items are just a orange square
-    set pcolor orange
-  ]
-  stop
-]
-end
-
-to place-cop-manually
-  if mouse-down?
-  [
-    create-cops 1 [
-      setxy mouse-xcor mouse-ycor
-      set color black
-      set shape "person"
-      set view 90
-      ]
-    stop
-  ]
-end
-
-to setup-vision-radii
-  ; set up radius cops
-  ask cops [
-    print view
-    print radius-cops
-    ; here we still need to add that the patches need to belong to the same room the cop is in
-    ask patches in-cone radius-cops view [
-      set pcolor blue
-    ]
-  ]
-
-end
-
-; --- Setup vacuums ---
-to setup-vacuums
-  ; In this method you may create the vacuum cleaner agents (in this case, there is only 1 vacuum cleaner agent).
-end
-
-
-; --- Setup ticks ---
-to setup-ticks
-  ; In this method you may start the tick counter.
-  reset-ticks
-end
-
-
-; --- Update desires ---
-to update-desires
-  ; You should update your agent's desires here.
-  ; At the beginning your agent should have the desire to clean all the dirt.
-  ; If it realises that there is no more dirt, its desire should change to something like 'stop and turn off'.
-end
-
-
-; --- Update desires ---
-to update-beliefs
- ; You should update your agent's beliefs here.
- ; At the beginning your agent will receive global information about where all the dirty locations are.
- ; This belief set needs to be updated frequently according to the cleaning actions: if you clean dirt, you do not believe anymore there is a dirt at that location.
- ; In Assignment 3.3, your agent also needs to know where is the garbage can.
-end
-
-
-; --- Update intentions ---
-to update-intentions
-  ; You should update your agent's intentions here.
-  ; The agent's intentions should be dependent on its beliefs and desires.
-end
-
-
-; --- Execute actions ---
-to execute-actions
-  ; Here you should put the code related to the actions performed by your agent: moving and cleaning (and in Assignment 3.3, throwing away dirt).
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-376
+624
 10
-919
+1167
 574
 -1
 -1
@@ -263,8 +423,8 @@ GRAPHICS-WINDOW
 40
 0
 40
-0
-0
+1
+1
 1
 ticks
 30.0
@@ -287,15 +447,15 @@ NIL
 1
 
 SLIDER
-9
-133
-181
-166
+7
+169
+179
+202
 num_customers
 num_customers
 0
 300
-166
+73
 1
 1
 NIL
@@ -352,11 +512,123 @@ NIL
 NIL
 1
 
+BUTTON
+80
+95
+244
+128
+NIL
+place-thief-manually
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+TEXTBOX
+10
+232
+160
+250
+Setup thieves
+11
+0.0
+1
+
 SLIDER
-55
-231
-227
-264
+9
+251
+181
+284
+max-speed-thieves
+max-speed-thieves
+0
+10
+5
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+185
+252
+357
+285
+max-strength-thieves
+max-strength-thieves
+0
+10
+5
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+359
+253
+531
+286
+radius-thieves
+radius-thieves
+0
+10
+5
+1
+1
+NIL
+HORIZONTAL
+
+TEXTBOX
+8
+295
+158
+313
+Setup cops
+11
+0.0
+1
+
+SLIDER
+9
+315
+181
+348
+max-speed-cops
+max-speed-cops
+0
+10
+5
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+185
+317
+357
+350
+max-strength-cops
+max-strength-cops
+0
+10
+5
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+363
+318
+535
+351
 radius-cops
 radius-cops
 0

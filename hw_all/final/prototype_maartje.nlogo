@@ -192,8 +192,6 @@ end
 to setup-vision-radii
   ; set up radius cops
   ask cops [
-    ; here we still need to add that the patches need to belong to the same room the cop is in
-
     let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
     let c who
 
@@ -207,7 +205,7 @@ to setup-vision-radii
           print patch_coord
           set vision_radius lput (patch_coord) vision_radius
         ]
-        set pcolor 99
+        set pcolor 99 ;light blue
       ]
     ]
   ]

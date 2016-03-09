@@ -29,7 +29,9 @@ breed [customers customer]
 
 customers-own [ move_around ]
 
-cops-own [beliefs desire intention strength speed radius ]
+cops-own [beliefs desire intention view vision_radius strength speed radius ]
+; view = how many patches forward
+; vision_radius = all patches he can see
 
 thieves-own [ belief_seeing_cop belief_room belief_outside_door desire intention strength speed radius items steal flight
   move_around observe_environment steal_item drop_item escape]
@@ -49,6 +51,7 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   if ticks = 0 [
+    setup-vision-radii
     setup-thieves
     setup-cops
   ]
@@ -112,6 +115,8 @@ to place-cop-manually
       setxy mouse-xcor mouse-ycor
       set color black
       set shape "person"
+      set view 90
+      set vision_radius []
       ]
     stop
   ]
@@ -127,6 +132,30 @@ to place-thief-manually
       ]
     stop
   ]
+end
+
+
+to setup-vision-radii
+  ; set up radius cops
+  ask cops [
+    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+    let c who
+
+
+    ask patches in-cone radius-cops view [
+      let patch_coord list pxcor pycor
+      let room_patch table:get room_dict patch_coord
+
+      if room_patch = cop_room [
+        ask cop c [
+          print patch_coord
+          set vision_radius lput (patch_coord) vision_radius
+        ]
+        set pcolor 99 ;light blue
+      ]
+    ]
+  ]
+
 end
 
 
@@ -331,47 +360,45 @@ to setup-patches
 end
 
 to setup-rooms
-  let num_rooms 7 ; in the current prototype we have seven rooms
 
   set room_dict table:make
-  while [num_rooms > 0] [
-    table:put room_dict num_rooms 0
-    set num_rooms num_rooms - 1
+  ask patches [
+    table:put room_dict list pxcor pycor 0
   ]
 
   ; room 1 (left lower corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 ] [
-    set pcolor white
+    table:put room_dict list pxcor pycor 1
   ]
 
   ; room 2 (path)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 - 3 and pxcor < (max-pxcor - min-pxcor) / 2 + 3 and pycor > min-pycor and pycor < max-pycor] [
-    set pcolor white
+    table:put room_dict list pxcor pycor 2
   ]
 
   ; room 3 (right lower corner)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 - 5] [
-    set pcolor white
+    table:put room_dict list pxcor pycor 3
   ]
 
   ; room 4 (right middle)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 - 5 and pycor < (max-pycor - min-pycor) / 2 + 5] [
-    set pcolor white
+    table:put room_dict list pxcor pycor 4
   ]
 
   ; room 5 (right upper corner)
   ask patches with [pxcor > (max-pxcor - min-pxcor) / 2 + 3 and pxcor < max-pxcor and pycor > (max-pycor - min-pycor) / 2 + 5 and pycor < max-pycor] [
-    set pcolor white
+    table:put room_dict list pxcor pycor 5
   ]
 
   ; room 6 (left middle)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 and pycor < (max-pycor - min-pycor) / 2 + 12 ] [
-    set pcolor white
+    table:put room_dict list pxcor pycor 6
   ]
 
   ; room 7 (left upper corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 + 12 and pycor < max-pycor] [
-    set pcolor white
+    table:put room_dict list pxcor pycor 7
   ]
 end
 @#$#@#$#@
