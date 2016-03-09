@@ -34,7 +34,7 @@ cops-own [beliefs desire intention view vision_radius strength speed radius ]
 ; vision_radius = all patches he can see
 
 thieves-own [ belief_seeing_cop belief_room belief_outside_door desire intention strength speed radius items steal flight
-  move_around observe_environment steal_item drop_item escape]
+  move_around observe_environment steal_item drop_item escape view vision_radius]
 
 ; --- Setup ---
 to setup
@@ -129,6 +129,8 @@ to place-thief-manually
       setxy mouse-xcor mouse-ycor
       set color green
       set shape "person"
+      set view 90
+      set vision_radius []
       ]
     stop
   ]
@@ -155,6 +157,27 @@ to setup-vision-radii
       ]
     ]
   ]
+
+  ; set up vision radius thieves
+
+  ask thieves [
+    let thief_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+    let t who
+
+    ask patches in-cone radius-thieves view [
+      let patch_coord list pxcor pycor
+      let room_patch table:get room_dict patch_coord
+
+      if room_patch = thief_room [
+        ask thief t [
+          print patch_coord
+          set vision_radius lput (patch_coord) vision_radius
+        ]
+        set pcolor 69 ;light green
+      ]
+    ]
+  ]
+
 
 end
 
