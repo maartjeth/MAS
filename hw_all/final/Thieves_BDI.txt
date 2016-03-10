@@ -1,0 +1,43 @@
+Thieves BDI framework
+
+Beliefs: cops, rooms, outside_doors, items
+desires: steal, flight
+intentions: move_around, move_to_item, observe_environment, drop_item, escape
+
+belief_cops: [copID, x, y]
+belief_rooms_doors: [roomID[doorx, doory, soort]]
+
+Update beliefs:
+if	cop in radius 
+	belief cops
+if	location is room and room not in beliefs
+	belief rooms
+if	door in radius and door niet in belief rooms
+	belief rooms
+if	door in radius and 
+
+Update desires:
+if	item and distance myself-belief position cop > x
+	desire = flight
+if 	item and no cops
+	desire = flight
+else	
+	desire = steal	
+
+Update intentions:
+if	no item and no belief items and desire = steal
+	intention = move_around
+if	no item and belief items and desire = steal
+	intention = move_to_item
+if 	intention = move_around, move_to_item, escape
+	intention = observe_environment
+if	no item and locatie = belief items and desire is steal
+	intention = steal_item
+if	item and desire = flight
+	intention = escape
+
+
+# alleen stelen als geen cop in de buurt?
+# maar 1 item tegelijk?
+# item droppen?
+	
