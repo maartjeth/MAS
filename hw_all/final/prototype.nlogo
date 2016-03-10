@@ -4,6 +4,23 @@
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
 ; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
 
+
+
+; TO DO
+; BDI network
+; Save doors to rooms
+; Cops: follow thieves
+; Thieves: get item, escape
+
+
+; DONE
+; Setup floor
+; All patches belong to room
+; Thieves in environment
+; Cops in environment
+; Cops and thieves have vision radius
+
+
 extensions [table]
 
 globals [time
@@ -326,6 +343,21 @@ to move-around
   ]
   [ forward 1
     ]
+end
+
+; note: the belief base of the cop needs to be updated by the new position of the thief all the time
+to new_pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
+
+  let my_room_patch table:get room_dict my_pos
+  let follow_room_patch table:get room_dict follow_pos
+
+  if my_room_patch = follow_room_patch [ ; if you're at the same room, you can simply move towards the position
+    let x item 0 follow_pos
+    let y item 1 follow_pos
+    facexy x y
+  ]
+
+  ; else --> check whether you know that where the door is --> move to the door
 end
 
 to pickup-item
