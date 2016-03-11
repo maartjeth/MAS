@@ -54,7 +54,10 @@ breed [customers customer]
 customers-own [ move_around ]
 ; move_around: every customer will have the intention to move around
 
-cops-own [beliefs desire intention view vision_radius strength speed radius ]
+cops-own [beliefs desire intention view vision_radius strength speed radius
+  move_around observe_environment inform_colleague receive_message
+  chase_thief catch_thief escort_thief look_for_thief
+  belief_seeing_thief belief_room belief_outside_door]
 ; view: how many patches forward
 ; vision_radius: all patches he can see
 
@@ -88,7 +91,6 @@ to setup-thieves
 ask thieves [
   ; beliefs
 
-
   ; desires
   set steal "steal"
   set flight "flight"
@@ -99,13 +101,25 @@ ask thieves [
   set steal_item "steal_item"
   set drop_item "drop_item"
   set escape "escape"
-
 ]
 end
 
 to setup-cops
 ask cops [
+  ; beliefs
 
+  ; desires
+  set look_for_thief "look_for_thief"
+  set catch_thief "catch_thief"
+
+  ; intentions
+  set move_around "move_around"
+  set observe_environment "observe_environment"
+  set inform_colleague "inform_colleague"
+  set receive_message "receive_message"
+  set chase_thief "chase_thief"
+  set catch_thief "catch_thief"
+  set escort_thief "escort_thief"
 ]
 end
 
@@ -209,8 +223,6 @@ to setup-vision-radii
       ]
     ]
   ]
-
-
 end
 
 
@@ -223,7 +235,9 @@ end
 ; --- Setup beliefs ---
 to setup-beliefs
   ask cops [
-
+    set belief_seeing_thief []
+    set belief_room [] ; what's this exactly?
+    set belief_outside_door []
   ]
 
   ask thieves [
@@ -237,7 +251,7 @@ end
 ; --- Setup desires ---
 to setup-desires
   ask cops [
-
+    set desire look_for_thief
   ]
 
   ask thieves [
@@ -290,8 +304,27 @@ to update-beliefs
    set t t + 1
  ]
 
+ ; gives no errors at setup, but should really be checked while running
  let c 0
  ask cops [
+   ; add thiefs to belief base cops
+   foreach vision_radius [
+     let x_cor item 0 ?
+     let y_cor item 1 ?
+     ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
+       ask turtles with [xcor = x_cor and ycor = y_cor] [
+         if breed != [breed] of myself [
+           set belief_seeing_thief lput(list xcor ycor) belief_seeing_thief ; add coordinates of thief to belief base
+           ; do we want to sort this list, or do we want to stick to following the first?
+         ]
+       ]
+     ]
+   ]
+
+   ; update which door belongs to which room
+
+   ; do we want to have a belief about which room you're in, as a 'real belief'?
+
 
 
   set c c + 1
@@ -385,11 +418,6 @@ end
 
 to setup-rooms
 
-  set room_dict table:make
-  ask patches [
-    table:put room_dict list pxcor pycor 0
-  ]
-
   ; room 1 (left lower corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 ] [
     table:put room_dict list pxcor pycor 1
@@ -431,6 +459,11 @@ to setup-patches
   ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
   ; This might be another way how to do it witout hard coding: http://ccl.northwestern.edu/netlogo/models/community/maze-maker-2004
 
+  set room_dict table:make
+  ask patches [
+    table:put room_dict list pxcor pycor 0
+  ]
+
   ask patches [
     set pcolor white
   ]
@@ -458,19 +491,37 @@ to setup-patches
   ; doors outside
   ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor or pycor = min-pycor)] [
     set pcolor red
+    table:put room_dict list pxcor pycor 2 ; in this version these two doors belong to the hall way
   ]
 
   ; doors in environment - right side
   ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and (pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 10 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
+    let i 0
     set pcolor blue
+    ; assign door patches to rooms
+    if i = 0 [
+      table:put room_dict list pxcor pycor 5 ]
+    if i = 1 [
+      table:put room_dict list pxcor pycor 4 ]
+    if i = 2 [
+      table:put room_dict list pxcor pycor 3 ]
+    set i i + 1
   ]
 
   ; doors in environment - left side
   ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and (pycor = (max-pycor - min-pycor) / 2 + 3 or pycor = (max-pycor - min-pycor) / 2 + 14 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
     set pcolor blue
+    ; assign door patches to rooms
+    let j 0
+    if j = 0 [
+      table:put room_dict list pxcor pycor 6 ]
+    if j = 1 [
+      table:put room_dict list pxcor pycor 7 ]
+    if j = 2 [
+      table:put room_dict list pxcor pycor 1 ]
+    set j j + 1
   ]
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 624
