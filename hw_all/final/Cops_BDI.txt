@@ -1,0 +1,47 @@
+Cops BDI framework
+
+Beliefs: cops, thieves, rooms&door
+Desires: look for thief, catch thief
+Intentions: move_around, observe_environment, inform_colleague, receive_message, chase_thief, catch_thief, escort_thief
+
+belief_cops: [copID, x, y]
+belief_thieves: [thiefID, x, y, speed, strength, captured]
+
+Update beliefs:
+if 	cop in radius
+	belief cops
+if 	thief in radius or message about thief
+	belief thieves
+if	location is room and room not in beliefs
+	belief rooms&doors
+if 	door in radius and door not in beliefs
+	belief rooms&doors
+
+Update desires:
+if 	no belief thieves or belief thieves but no location
+	desire = look for thief
+if	belief thief 
+	desire = catch thief
+
+Update intentions:
+if	(no belief thieves or belief thieves but no location) and desire = 	look for thief #dubbelop, maar netjes/volledig voor BDI?
+	intention = move_around
+if	belief thieves with location and desire = catch thief
+	intention = chase_thief
+if	intion = move_around, catch_thief
+	intention = observe_environment
+if	belief thieves with location same as yours and desire = catch thief 	and strength thief >= own strength  OR intention = catch_thief
+	intention = inform_colleague
+if	incoming message 
+	intention = receive_message
+if	belief thieves with location different from yours and desire = catch 	thief  
+	intention = chase_thief
+if 	belief thieves with location same as yours and desire = catch thief 		and strength > strength thief
+	intention = catch_thief
+if	belief thief is captured
+	intention = escort_thief
+
+Veranderd: speed & strength alleen van thief weten (ivm roepen andere cops), desire talk to colleagues weg --> intention komt van catch thief, intention move to cop weggehaald --> ze praten over walkytalky <3, incoming messages owned by cops, escort thief toegevoegd wanneer ingerekend.
+Vragen: moet een message sturen en ontvangen ook een aparte tick zijn? (ik denk ja, onze vrinden kennende :P), dan wordt het namelijk een aparte intention ook. 
+Tellertje inbouwen in de cops en thieves dict?
+Wanneer roepen agenten de hulp van medeagenten in? Altijd of alleen maar als ze dichtbij genoeg zijn, of alleen als ze de dief niet aankunnen?

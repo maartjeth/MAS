@@ -1,6 +1,6 @@
 Thieves BDI framework
 
-Beliefs: cops, rooms, outside_doors, items
+Beliefs: cops, rooms&doors, items
 desires: steal, flight
 intentions: move_around, move_to_item, observe_environment, drop_item, escape
 
@@ -14,7 +14,6 @@ if	location is room and room not in beliefs
 	belief rooms
 if	door in radius and door niet in belief rooms
 	belief rooms
-if	door in radius and 
 
 Update desires:
 if	item and distance myself-belief position cop > x
@@ -40,4 +39,5 @@ if	item and desire = flight
 # alleen stelen als geen cop in de buurt?
 # maar 1 item tegelijk?
 # item droppen?
+# tellertje in cop dict?
 	
