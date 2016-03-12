@@ -133,6 +133,9 @@ to go
     setup-thieves
     setup-cops
   ]
+  ask cops [
+    print belief_seeing_thief
+  ]
   update-desires
   update-beliefs
   update-intentions
@@ -158,11 +161,13 @@ to place-cop-manually
   if mouse-down?
   [
     create-cops 1 [
-      setxy mouse-xcor mouse-ycor
+      setxy floor(mouse-xcor) floor(mouse-ycor)
       set color black
       set shape "person"
+      set heading 0 ; delete, this is just for debugging
       set view 90
       set vision_radius []
+      setup-beliefs-cops who
       ]
     stop
   ]
@@ -172,11 +177,13 @@ to place-thief-manually
   if mouse-down?
   [
     create-thieves 1 [
-      setxy mouse-xcor mouse-ycor
+      setxy floor(mouse-xcor)  floor(mouse-ycor)
       set color green
       set shape "person"
+
       set view 90
       set vision_radius []
+      setup-beliefs-thieves who
       ]
     stop
   ]
@@ -196,7 +203,6 @@ to setup-vision-radii
 
       if room_patch = cop_room [
         ask cop c [
-          print patch_coord
           set vision_radius lput (patch_coord) vision_radius
         ]
         set pcolor 99 ;light blue
@@ -216,7 +222,6 @@ to setup-vision-radii
 
       if room_patch = thief_room [
         ask thief t [
-          print patch_coord
           set vision_radius lput (patch_coord) vision_radius
         ]
         set pcolor 69 ;light green
@@ -233,19 +238,22 @@ to setup-ticks
 end
 
 ; --- Setup beliefs ---
-to setup-beliefs
-  ask cops [
+to setup-beliefs-cops [c]
+  ask cop c [
     set belief_seeing_thief []
+    print "setted up beliefs"
+    print belief_seeing_thief
     set belief_room [] ; what's this exactly?
     set belief_outside_door []
   ]
+end
 
-  ask thieves [
+to setup-beliefs-thieves [t]
+  ask thief t [
      set belief_seeing_cop []
      set belief_room []
      set belief_outside_door []
   ]
-
 end
 
 ; --- Setup desires ---
@@ -304,22 +312,34 @@ to update-beliefs
    set t t + 1
  ]
 
+ print "updating beliefs"
+
  ; gives no errors at setup, but should really be checked while running
- let c 0
  ask cops [
    ; add thiefs to belief base cops
+   let c who
    foreach vision_radius [
      let x_cor item 0 ?
      let y_cor item 1 ?
      ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
        ask turtles with [xcor = x_cor and ycor = y_cor] [
-         if breed != [breed] of myself [
-           set belief_seeing_thief lput(list xcor ycor) belief_seeing_thief ; add coordinates of thief to belief base
+          if breed = thieves [
+            print "found a thief"
+            ask cop c [
+              print x_cor
+              print y_cor
+              print belief_seeing_thief
+              set belief_seeing_thief lput(list x_cor y_cor) belief_seeing_thief ; add coordinates of thief to belief base
+            ]
            ; do we want to sort this list, or do we want to stick to following the first?
-         ]
+
+          ]
        ]
      ]
    ]
+
+ ]
+
 
    ; update which door belongs to which room
 
@@ -327,8 +347,7 @@ to update-beliefs
 
 
 
-  set c c + 1
- ]
+
 
 end
 
@@ -759,6 +778,23 @@ radius-cops
 1
 NIL
 HORIZONTAL
+
+BUTTON
+359
+60
+422
+93
+NIL
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
