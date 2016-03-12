@@ -11,6 +11,7 @@
 ; Save doors to rooms
 ; Cops: follow thieves
 ; Thieves: get item, escape
+; update vision radius while moving
 
 
 ; DONE
@@ -19,6 +20,7 @@
 ; Thieves in environment
 ; Cops in environment
 ; Cops and thieves have vision radius
+; Cops: find thieves in vision radius
 
 
 extensions [table]
@@ -83,44 +85,43 @@ to setup-customers
     move-to one-of patches with [pcolor != black and not any? customers-on self]
     ; customers have only one intention
     set move_around "move_around"
-
   ]
 end
 
 to setup-thieves
-ask thieves [
-  ; beliefs
+  ask thieves [
+    ; beliefs
 
-  ; desires
-  set steal "steal"
-  set flight "flight"
+    ; desires
+    set steal "steal"
+    set flight "flight"
 
-  ; intentions
-  set move_around "move_around"
-  set observe_environment "observe_environment"
-  set steal_item "steal_item"
-  set drop_item "drop_item"
-  set escape "escape"
-]
+    ; intentions
+    set move_around "move_around"
+    set observe_environment "observe_environment"
+    set steal_item "steal_item"
+    set drop_item "drop_item"
+    set escape "escape"
+  ]
 end
 
 to setup-cops
-ask cops [
-  ; beliefs
+  ask cops [
+    ; beliefs
 
-  ; desires
-  set look_for_thief "look_for_thief"
-  set catch_thief "catch_thief"
+    ; desires
+    set look_for_thief "look_for_thief"
+    set catch_thief "catch_thief"
 
-  ; intentions
-  set move_around "move_around"
-  set observe_environment "observe_environment"
-  set inform_colleague "inform_colleague"
-  set receive_message "receive_message"
-  set chase_thief "chase_thief"
-  set catch_thief "catch_thief"
-  set escort_thief "escort_thief"
-]
+    ; intentions
+    set move_around "move_around"
+    set observe_environment "observe_environment"
+    set inform_colleague "inform_colleague"
+    set receive_message "receive_message"
+    set chase_thief "chase_thief"
+    set catch_thief "catch_thief"
+    set escort_thief "escort_thief"
+  ]
 end
 
 
@@ -134,12 +135,14 @@ to go
     setup-cops
   ]
   ask cops [
-    print belief_seeing_thief
+    ;print belief_seeing_thief
   ]
   update-desires
   update-beliefs
-  update-intentions
-  execute-actions
+  update-intentions-cops
+  ; update-intentions-thieves
+  execute-actions-cops
+  ;execute-actions-thieves
   tick
 end
 
@@ -168,6 +171,7 @@ to place-cop-manually
       set view 90
       set vision_radius []
       setup-beliefs-cops who
+      setup-desires-cops who
       ]
     stop
   ]
@@ -184,12 +188,13 @@ to place-thief-manually
       set view 90
       set vision_radius []
       setup-beliefs-thieves who
+      setup-desires-thieves who
       ]
     stop
   ]
 end
 
-
+; NOTE: we do have some questionable vision radii every now and then...
 to setup-vision-radii
   ; set up radius cops
   ask cops [
@@ -241,8 +246,8 @@ end
 to setup-beliefs-cops [c]
   ask cop c [
     set belief_seeing_thief []
-    print "setted up beliefs"
-    print belief_seeing_thief
+    ;print "setted up beliefs"
+    ;print belief_seeing_thief
     set belief_room [] ; what's this exactly?
     set belief_outside_door []
   ]
@@ -257,12 +262,14 @@ to setup-beliefs-thieves [t]
 end
 
 ; --- Setup desires ---
-to setup-desires
-  ask cops [
+to setup-desires-cops [c]
+  ask cop c [
     set desire look_for_thief
   ]
+end
 
-  ask thieves [
+to setup-desires-thieves [t]
+  ask thief t [
     set desire steal_item
   ]
 end
@@ -312,9 +319,9 @@ to update-beliefs
    set t t + 1
  ]
 
- print "updating beliefs"
+ ;print "updating beliefs"
 
- ; gives no errors at setup, but should really be checked while running
+ ;
  ask cops [
    ; add thiefs to belief base cops
    let c who
@@ -324,12 +331,12 @@ to update-beliefs
      ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
        ask turtles with [xcor = x_cor and ycor = y_cor] [
           if breed = thieves [
-            print "found a thief"
+            ;print "found a thief"
             ask cop c [
-              print x_cor
-              print y_cor
-              print belief_seeing_thief
-              set belief_seeing_thief lput(list x_cor y_cor) belief_seeing_thief ; add coordinates of thief to belief base
+              if (member? (list x_cor y_cor) belief_seeing_thief = false) [ ; check whether not in belief base already
+                set belief_seeing_thief lput(list x_cor y_cor) belief_seeing_thief ; add coordinates of thief to belief base
+                ;print belief_seeing_thief
+              ]
             ]
            ; do we want to sort this list, or do we want to stick to following the first?
 
@@ -353,7 +360,7 @@ end
 
 
 ; --- Update intentions ---
-to update-intentions
+to update-intentions-thieves
   ; You should update your agent's intentions here.
   ; The agent's intentions should be dependent on its beliefs and desires.
   let th 0
@@ -395,21 +402,94 @@ to update-intentions
   ]
 end
 
+to update-intentions-cops
+  ask cops [
+    ifelse belief_seeing_thief = [] [ ; hasn't seen thief
+      ifelse intention = observe_environment [
+        set intention move_around
+      ]
+      [ set intention observe_environment ]
+    ]
+    ; has seen thief
+    [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
+      let thief_x item 0 thief_coord
+      let thief_y item 1 thief_coord
+
+      ifelse xcor = thief_x and ycor = thief_y [
+        set intention catch_thief
+      ]
+      [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+    ]
+  ;print "intention cop"
+  ;print intention
+  ]
+end
+
+
+
 
 ; --- Execute actions ---
-to execute-actions
+to execute-actions-thieves
   ; Here you should put the code related to the actions performed by your agent
 
 end
 
-to move-around
-  ; to check if turtle reaches a wall
-  ifelse ( patch-ahead pcolor = black ) [
-    lt (random 180) - 45 ; to avoid loops
-    forward 1
-  ]
-  [ forward 1
+
+to execute-actions-cops
+  ask cops [
+    if intention = move_around [
+      move-around who
     ]
+
+    if intention = observe_environment [
+      observe-environment
+    ]
+
+    if intention = chase_thief [
+      chase-thief
+    ]
+
+    if intention = catch_thief [
+      catch-thief
+    ]
+  ]
+end
+
+
+to move-around [i]
+  ; to check if turtle reaches a wall --> only works for cops now
+  ask patch-ahead 1 [
+    ifelse pcolor = black [
+      if [breed] of turtle i = cops [
+        ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
+          lt 180
+          forward 1
+          lt random 90
+        ]
+      ]
+    ]
+    [ if [breed] of turtle i = cops [
+        ask cop i [
+          forward 1
+        ]
+      ]
+    ]
+  ]
+
+
+
+end
+
+to observe-environment
+  ; observe environment
+end
+
+to chase-thief
+  ; chase thief
+end
+
+to catch-thief
+  ; catch thief
 end
 
 ; note: the belief base of the cop needs to be updated by the new position of the thief all the time
@@ -595,7 +675,7 @@ num_customers
 num_customers
 0
 300
-73
+111
 1
 1
 NIL
