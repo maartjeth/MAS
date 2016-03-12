@@ -14,7 +14,8 @@
 ; communcation
 ; customers should move a bit --> for example random sample moves 1 forward in a random direction per tick
 ; update seen thieves so that it can work with thieves that move
-; cops can still walk through the wall
+; cops can still walk through the wall --> sometimes??? most of the time they do change direction
+; sometimes new position thiefs gives error --> pos to -1
 
 
 ; DONE
@@ -216,7 +217,9 @@ to set-vision-radii-cops [c]
        let clean_x item 0 ?
        let clean_y item 1 ?
        ask patches with [pxcor = clean_x and pycor = clean_y] [
-         set pcolor white
+         if (pcolor != blue or pcolor != red) [
+           set pcolor white
+         ]
        ]
     ]
 
@@ -247,7 +250,9 @@ to set-vision-radii-thieves [t]
        let clean_x item 0 ?
        let clean_y item 1 ?
        ask patches with [pxcor = clean_x and pycor = clean_y] [
-         set pcolor white
+         if (pcolor != blue or pcolor != red) [
+           set pcolor white
+         ]
        ]
     ]
 
@@ -444,7 +449,7 @@ to update-intentions-thieves
       ]
       []
     ]
-   print intention
+   ;print intention
   ]
 
 end
@@ -464,18 +469,14 @@ to update-intentions-cops
       [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
         let thief_x item 0 thief_coord
         let thief_y item 1 thief_coord
-
-        print thief_x
-        print thief_y
-
-        ifelse floor(xcor) = thief_x and floor(ycor) = thief_y [
+        ifelse distancexy thief_x thief_y < 0.5 [
           set intention catch_thief
         ]
         [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
       ]
     ]
-  ;print "intention cop"
-  ;print intention
+  print "intention cop"
+  print intention
   ]
 
 
@@ -488,7 +489,7 @@ end
 to execute-actions-thieves
   ask thieves [
     if intention = move_around [
-      move-around-thief who
+      ;move-around-thief who
     ]
 
     if intention = move_to_item [
@@ -545,6 +546,7 @@ to send-message [c]
       ]
     ]
   ]
+  set messages []
 end
 
 
@@ -613,6 +615,7 @@ end
 to observe-environment-cops [c]
 
   ; check whether you see at thief
+   set seen_thieves [] ; reset and make new one based on what you see now
    foreach vision_radius [
      let x_cor item 0 ?
      let y_cor item 1 ?
@@ -692,15 +695,26 @@ to chase-thief [c]
 end
 
 to catch-thief [c] ; sometimes this doesn't seem to work, but I don't know when exactly --> guess when the one cop already caught the thief --> send message that the thief has been caught
-  let x_cor floor(xcor)
-  let y_cor floor(ycor)
-  ask thieves with [xcor = x_cor and ycor = y_cor] [die] ; this might be a bit of a severe punishment ;)
+  let x_cor xcor
+  let y_cor ycor
+  ask thieves [
+    if distancexy x_cor y_cor < 0.5 [
+      die
+    ]
+  ]
+  ask cops [
+    set seen_thieves [] ; this is to make sure that the cops are continueing observing the environment --> might want to change this if the way the thiefs are being caught changes
+  ]
+
+
+  ; delete thief from belief list --> done automatilly while updating?
+
 end
 
 ; note: the belief base of the cop needs to be updated by the new position of the thief all the time
 to new-pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
 
-  let my_room_patch table:get room_dict my_pos
+  let my_room_patch table:get room_dict my_pos ; NOTE: sometimes this gives an error
   let follow_room_patch table:get room_dict follow_pos
 
   if my_room_patch = follow_room_patch [ ; if you're at the same room, you can simply move towards the position
@@ -1103,7 +1117,7 @@ radius-cops
 radius-cops
 0
 10
-5
+10
 1
 1
 NIL
