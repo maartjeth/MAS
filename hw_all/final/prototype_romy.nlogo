@@ -4,14 +4,45 @@
 ; Maartje ter Hoeve (10190015, maartje.terhoeve@student.uva.nl)
 ; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
 
+
+
+; TO DO
+; BDI network
+; Save doors to rooms
+; Cops: follow thieves
+; Thieves: get item, escape
+; update vision radius while moving
+; communcation
+; customers should move a bit --> for example random sample moves 1 forward in a random direction per tick
+
+
+; DONE
+; Setup floor
+; All patches belong to room
+; Thieves in environment
+; Cops in environment
+; Cops and thieves have vision radius
+; Cops: find thieves in vision radius
+; Cops: moves around randomly when no thieves observed --> doesn't walk through wall, doesn't walk through customers
+
+
 extensions [table]
+
+
+; --- Global variables ---
+; The following global variables are given.
 
 globals [time
          room_dict
          x
          y
-         steal-item
-        ]
+         stealable_item]
+
+; time: the time elapsed during the simulation
+; room_dict: a dictionary with all the rooms, and which patches belong to it
+; x: ?
+; y: ?
+; stealable_item: boolean whether or not an item is stealable by thieves
 
 
 ; --- Agents ---
@@ -22,19 +53,23 @@ breed [thieves thief]
 breed [customers customer]
 
 
-
 ; --- Local variables ---
 ; The following local variables are given.
-;
 
 customers-own [ move_around ]
+; move_around: every customer will have the intention to move around
 
-cops-own [beliefs desire intention view vision_radius strength speed radius ]
-; view = how many patches forward
-; vision_radius = all patches he can see
+cops-own [beliefs desire intention view vision_radius strength speed radius
+  move_around observe_environment inform_colleague receive_message
+  chase_thief catch_thief escort_thief look_for_thief
+  belief_seeing_thief belief_room belief_outside_door seen_thieves
+  messages sent_messages]
+; view: how many patches forward
+; vision_radius: all patches he can see
 
-thieves-own [ belief_seeing_cop belief_room belief_outside_door desire intention strength speed radius items steal flight
-  move_around observe_environment steal_item drop_item escape]
+thieves-own [ belief_seeing_cop belief_room belief_outside_door belief_items desire intention strength speed radius items steal flight
+  move_around observe_environment move_to_item steal_item drop_item escape view vision_radius seen_cops item_x item_y check_item_x check_item_y]
+
 
 ; --- Setup ---
 to setup
@@ -46,23 +81,6 @@ to setup
   setup-ticks
 end
 
-
-; --- Main processing cycle ---
-to go
-  ; This method executes the main processing cycle of an agent.
-  if ticks = 0 [
-    setup-vision-radii
-    setup-thieves
-    setup-cops
-  ]
-  update-desires
-  update-beliefs
-  update-intentions
-  execute-actions
-  tick
-end
-
-
 to setup-customers
   create-customers num_customers
   ask customers [
@@ -71,37 +89,73 @@ to setup-customers
     move-to one-of patches with [pcolor != black and not any? customers-on self]
     ; customers have only one intention
     set move_around "move_around"
-
   ]
 end
 
 to setup-thieves
-ask thieves [
-  ; desires
-  set steal "steal"
-  set flight "flight"
+  ask thieves [
+    ; beliefs
 
-  ; intentions
-  set move_around "move_around"
-  set observe_environment "observe_environment"
-  set steal_item "steal_item"
-  set drop_item "drop_item"
-  set escape "escape"
+    ; desires
+    set steal "steal"
+    set flight "flight"
 
-]
+    ; intentions
+    set move_around "move_around"
+    set observe_environment "observe_environment"
+    set move_to_item "move_to_item"
+    set steal_item "steal_item"
+    set drop_item "drop_item"
+    set escape "escape"
+  ]
 end
 
 to setup-cops
-ask cops [
+  ask cops [
+    ; beliefs
 
-]
+
+    ; desires
+    set look_for_thief "look_for_thief"
+    set catch_thief "catch_thief"
+
+    ; intentions
+    set move_around "move_around"
+    set observe_environment "observe_environment"
+    set inform_colleague "inform_colleague"
+    set receive_message "receive_message"
+    set chase_thief "chase_thief"
+    set catch_thief "catch_thief"
+    set escort_thief "escort_thief"
+  ]
 end
+
+
+
+; --- Main processing cycle ---
+to go
+  ; This method executes the main processing cycle of an agent.
+  if ticks = 0 [
+    setup-thieves
+    setup-cops
+  ]
+  update-desires
+  update-beliefs
+  update-intentions-cops
+  ; update-intentions-thieves
+  execute-actions-cops
+  ;execute-actions-thieves
+  tick
+end
+
+
+
 
 to place-item-manually
   if mouse-down?
   [
     ask patch round mouse-xcor round mouse-ycor [
-    set steal-item "yes" ;patches cannot have a 'shape', therefor the items are just a orange square
+    set stealable_item "yes" ;patches cannot have a 'shape', therefor the items are just a orange square
     set pcolor orange
   ]
   stop
@@ -112,11 +166,18 @@ to place-cop-manually
   if mouse-down?
   [
     create-cops 1 [
-      setxy mouse-xcor mouse-ycor
+      setxy floor(mouse-xcor) floor(mouse-ycor)
       set color black
       set shape "person"
+      set heading 0 ; delete, this is just for debugging
       set view 90
+      set seen_thieves []
+      set messages []
+      set sent_messages []
       set vision_radius []
+      set-vision-radii-cops who
+      setup-beliefs-cops who
+      setup-desires-cops who
       ]
     stop
   ]
@@ -126,36 +187,80 @@ to place-thief-manually
   if mouse-down?
   [
     create-thieves 1 [
-      setxy mouse-xcor mouse-ycor
+      setxy floor(mouse-xcor)  floor(mouse-ycor)
       set color green
       set shape "person"
+
+      set view 90
+      set vision_radius []
+      set-vision-radii-thieves who
+      setup-beliefs-thieves who
+      setup-desires-thieves who
       ]
     stop
   ]
 end
 
-
-to setup-vision-radii
+; NOTE: we do have some questionable vision radii every now and then...
+to set-vision-radii-cops [c]
   ; set up radius cops
-  ask cops [
-    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
-    let c who
+  ask cop c [
 
+    ; remove current vision radius
+    foreach vision_radius [
+       let clean_x item 0 ?
+       let clean_y item 1 ?
+       ask patches with [pxcor = clean_x and pycor = clean_y] [
+         set pcolor white
+       ]
+    ]
+
+    set vision_radius [] ; empty this thing here
+    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
 
     ask patches in-cone radius-cops view [
       let patch_coord list pxcor pycor
       let room_patch table:get room_dict patch_coord
 
-      if room_patch = cop_room [
+      if room_patch = cop_room and pcolor != black [
         ask cop c [
-          print patch_coord
           set vision_radius lput (patch_coord) vision_radius
         ]
         set pcolor 99 ;light blue
       ]
     ]
   ]
+end
 
+to set-vision-radii-thieves [t]
+  ; set up vision radius thieves
+
+  ask thief t [
+
+    ; remove current vision radius
+    foreach vision_radius [
+       let clean_x item 0 ?
+       let clean_y item 1 ?
+       ask patches with [pxcor = clean_x and pycor = clean_y] [
+         set pcolor white
+       ]
+    ]
+
+    set vision_radius [] ; empty this thing here
+    let thief_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+
+    ask patches in-cone radius-thieves view [
+      let patch_coord list pxcor pycor
+      let room_patch table:get room_dict patch_coord
+
+      if room_patch = thief_room and pcolor != black [
+        ask thief t [
+          set vision_radius lput (patch_coord) vision_radius
+        ]
+        set pcolor 69 ;light green
+      ]
+    ]
+  ]
 end
 
 
@@ -166,26 +271,34 @@ to setup-ticks
 end
 
 ; --- Setup beliefs ---
-to setup-beliefs
-  ask cops [
-
+to setup-beliefs-cops [c]
+  ask cop c [
+    set belief_seeing_thief []
+    ;print "setted up beliefs"
+    ;print belief_seeing_thief
+    set belief_room [] ; what's this exactly?
+    set belief_outside_door []
   ]
+end
 
-  ask thieves [
+to setup-beliefs-thieves [t]
+  ask thief t [
      set belief_seeing_cop []
      set belief_room []
      set belief_outside_door []
+     set belief_items [] ;belief about the items that can be stolen
   ]
-
 end
 
 ; --- Setup desires ---
-to setup-desires
-  ask cops [
-
+to setup-desires-cops [c]
+  ask cop c [
+    set desire look_for_thief
   ]
+end
 
-  ask thieves [
+to setup-desires-thieves [t]
+  ask thief t [
     set desire steal_item
   ]
 end
@@ -210,13 +323,18 @@ to update-desires
 
   ask thieves [
     ;if the thief has an item or has an items and sees a cop, the thief will flight.
-    ifelse items != [] or (items != [] and belief_seeing_cop != []) [
-      set desire flight
-    ]
+    ifelse belief_items != [] [
+      ifelse belief_seeing_cop != [] [
+          set desire flight
+        ]
+        [
+          set desire flight
+        ]
+      ]
     [
       set desire steal_item
     ]
-  ]
+    ]
 end
 
 
@@ -225,6 +343,9 @@ to update-beliefs
  ; You should update your agent's beliefs here.
  let t 0
  ask thieves [
+   set belief_seeing_cop seen_cops
+   set belief_seeing_cop sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_cop
+   ;should the belief not contain strength, speed and coordinates instead of a string?
 
    ;if seeing cop: store cop with speed, strength and location (for number of ticks)
 
@@ -232,29 +353,68 @@ to update-beliefs
 
    ;if outside door, store it
 
-   set t t + 1
+   ; delete item that the thief has already stolen from belief_items and sort the list (just in case there are more than 1 items in sight, the thief will catch the closest item)
+  if beliefs != [] [
+      let check_items item 0 belief_items
+      set check_item_x item 0 check_items
+      set check_item_y item 1 check_items
+      ask patch check_item_x check_item_y [
+        if pcolor = white [
+          ask thief t [
+            if belief_items != [] [
+              set belief_items remove-item 0 belief_items
+            ]
+          ]
+       ]
+      ]
+    ]
+
+  set t t + 1
  ]
 
- let c 0
+ ;print "updating beliefs"
+
  ask cops [
-
-
-  set c c + 1
+   set belief_seeing_thief seen_thieves
+   set belief_seeing_thief sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_thief
  ]
+
+
+   ; update which door belongs to which room
+
+   ; do we want to have a belief about which room you're in, as a 'real belief'?
+
+
+
+
 
 end
 
 
 ; --- Update intentions ---
-to update-intentions
+to update-intentions-thieves
   ; You should update your agent's intentions here.
-  ; The agent's intentions should be dependent on its beliefs and desires.
-  let th 0
+  ; The agent's intentions should be dependent on its beliefs and desires
   ask thieves [
     ifelse intention = observe_environment and belief_seeing_cop = [] [
       set intention move_around
     ]
     [
+    if belief_items != [] [
+        ifelse distancexy (item 0 item 0 beliefs) (item 1 item 0 beliefs) > 0.5 [
+          ifelse intention = move_to_item [
+            set intention observe_environment ]  ; you need to do this to make sure it's checking out its environment as well while running around
+
+          [ set move_to_item item 0 beliefs
+            set intention move_to_item
+            set item_x item 0 intention
+            set item_y item 1 intention
+            facexy item_x item_y
+         ]
+        ]
+        [ set intention steal_item ]
+      ]
+
 
       ifelse desire = steal_item [
 
@@ -271,100 +431,326 @@ to update-intentions
         ]
 
 
-        set th th + 1
       ]
       []
     ]
 
   ]
 
+end
 
-  let co 0
+to update-intentions-cops
   ask cops [
+    ifelse belief_seeing_thief = [] [ ; hasn't seen thief
+      ifelse intention = observe_environment [
+        set intention move_around
+      ]
+      [ set intention observe_environment ]
+    ]
+    ; has seen thief
+    [ ifelse messages != [] [
+        set intention inform_colleague
+      ]
+      [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
+        let thief_x item 0 thief_coord
+        let thief_y item 1 thief_coord
 
+        print thief_x
+        print thief_y
 
-
-    set co co + 1
+        ifelse floor(xcor) = thief_x and floor(ycor) = thief_y [
+          set intention catch_thief
+        ]
+        [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+      ]
+    ]
+  ;print "intention cop"
+  ;print intention
   ]
 end
 
 
+
+
 ; --- Execute actions ---
-to execute-actions
+to execute-actions-thieves
   ; Here you should put the code related to the actions performed by your agent
 
 end
 
-to move-around
-  ; to check if turtle reaches a wall
-  ifelse ( patch-ahead pcolor = black ) [
-    lt (random 180) - 45 ; to avoid loops
-    forward 1
-  ]
-  [ forward 1
+
+to execute-actions-cops
+;  ask cops [
+;    if intention = send_message [
+;      send-message who
+;    ]
+;
+;    if intention = move_around [
+;      move-around-cop who
+;    ]
+;
+;    if intention = observe_environment [
+;      observe-environment-cops who
+;    ]
+
+;    if intention = chase_thief [
+;      chase-thief who
+;    ]
+
+;    if intention = catch_thief [
+;      catch-thief who
+;    ]
+;  ]
+
+  ask thieves [
+    if intention = move_around [
+      move-around-thief who
     ]
+
+    if intention = move_to_item [
+      move-to-item who
+    ]
+
+    if intention = observe_environment [
+      observe-environment-thieves who
+    ]
+
+    if intention = steal_item [
+      steal-item who
+    ]
+
+    if intention = escape [
+      escape-now who
+    ]
+  ]
 end
 
-to pickup-item
+to send-message [c]
+  ask cop c [
+
+  ]
+end
+
+
+to move-around-cop [i]
+  ; to check if turtle reaches a wall
+  ask patch-ahead 1 [
+    ifelse pcolor = black [
+      if [breed] of turtle i = cops [
+        ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
+          lt 180
+          forward 1
+          lt random 90
+          set-vision-radii-cops i
+        ]
+      ]
+    ]
+    [ ifelse not any? customers-on self and [breed] of turtle i = cops [
+        ask cop i [
+          forward 1
+          set-vision-radii-cops i
+        ]
+    ]
+    [ if [breed] of turtle i = cops [
+        ask cop i [
+          lt 90
+          set-vision-radii-cops i
+        ]
+       ]
+    ]
+    ]
+
+ ]
+end
+
+to move-around-thief [i]
+  ; to check if turtle reaches a wall
+  ask patch-ahead 1 [
+    ifelse pcolor = black [
+      if [breed] of turtle i = thieves [
+        ask thief i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
+          lt 180
+          forward 1
+          lt random 90
+          set-vision-radii-thieves i
+        ]
+      ]
+    ]
+    [ ifelse not any? customers-on self and [breed] of turtle i = thieves [
+        ask thief i [
+          forward 1
+          set-vision-radii-thieves i
+        ]
+    ]
+    [ if [breed] of turtle i = thieves [
+        ask cop i [
+          lt 90
+          set-vision-radii-thieves i
+        ]
+       ]
+    ]
+    ]
+
+ ]
+end
+
+to observe-environment-cops [c]
+
+  ; check whether you see at thief
+   foreach vision_radius [
+     let x_cor item 0 ?
+     let y_cor item 1 ?
+     ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
+       ask turtles with [xcor = x_cor and ycor = y_cor] [
+          if breed = thieves [
+            ask cop c [
+              if (member? (list x_cor y_cor) seen_thieves = false) [ ; check whether not in belief base already
+                set seen_thieves lput(list x_cor y_cor) seen_thieves ; add coordinates of thief to belief base
+              ]
+            ] ; this list is sorted later on
+
+          ]
+       ]
+     ]
+   ]
+
+   foreach seen_thieves [
+     if (member? ? sent_messages = false) [
+       set messages seen_thieves
+     ]
+   ]
+
+
+
+end
+
+to observe-environment-thieves [t]
+
+  ; check whether you see an agent
+   foreach vision_radius [
+     let x_cor item 0 ?
+     let y_cor item 1 ?
+     ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
+       ask turtles with [xcor = x_cor and ycor = y_cor] [
+          if breed = cops [
+            ask thief t [
+              if (member? (list x_cor y_cor) seen_cops = false) [ ; check whether not in belief base already
+                set seen_cops lput(list x_cor y_cor) seen_cops ; add coordinates of thief to belief base
+              ]
+            ] ; this list is sorted later on
+
+          ]
+       ]
+     ; if item is orange = item --> catch it. Adding here?
+     ]
+   ]
+
+   foreach seen_cops [
+     if (member? ? sent_messages = false) [
+       set messages seen_cops
+     ]
+   ]
+
+
+
+end
+
+to chase-thief [c]
+  let my_pos list floor(xcor) floor(ycor)
+  let follow_pos item 0 belief_seeing_thief
+  new-pos my_pos follow_pos
+
+  ask patch-ahead 1 [
+    ifelse not any? customers-on self [
+      ask cop c [
+        forward 1
+      ]
+    ]
+    [ ask cop c [
+        lt 90
+        forward 1
+      ]
+    ]
+  ]
+end
+
+to catch-thief [c] ; sometimes this doesn't seem to work, but I don't know when exactly --> guess when the one cop already caught the thief --> send message that the thief has been caught
+  let x_cor floor(xcor)
+  let y_cor floor(ycor)
+  ask thieves with [xcor = x_cor and ycor = y_cor] [die] ; this might be a bit of a severe punishment ;)
+end
+
+; note: the belief base of the cop needs to be updated by the new position of the thief all the time
+to new-pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
+
+  let my_room_patch table:get room_dict my_pos
+  let follow_room_patch table:get room_dict follow_pos
+
+  if my_room_patch = follow_room_patch [ ; if you're at the same room, you can simply move towards the position
+    let x_ item 0 follow_pos
+    let y_ item 1 follow_pos
+    facexy x_ y_
+  ]
+
+  ; else --> check whether you know that where the door is --> move to the door
+end
+
+to move-to-item [t]
+ if xcor != item_x and ycor != item_y [
+    forward 1
+    set-vision-radii-thieves t
+  ]
+
+end
+
+to steal-item [t]
   ; if you found an item, steal it
   if pcolor != white [
     set pcolor white
-    set items items + 1
+    ; also remove item from belief_items?
     ]
 end
 
+to escape-now [t]
+  ; to check if turtle reaches a wall
+  ifelse intention = escape ;no door in sight (now just rubish for debugging)
 
-; --- Setup patches ---
-to setup-patches
-  ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
-  ; This might be another way how to do it witout hard coding: http://ccl.northwestern.edu/netlogo/models/community/maze-maker-2004
+  [
+    ask patch-ahead 1 [
+      ifelse pcolor = black [
+        if [breed] of turtle t = thieves [
+          ask thief t [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
+            lt 180
+            forward 1
+            lt random 90
+            set-vision-radii-thieves t
+          ]
+        ]
+      ]
+      [ ifelse not any? customers-on self and [breed] of turtle t = thieves [
+          ask thief t [
+            forward 1
+            set-vision-radii-thieves t
+          ]
+      ]
+      [ if [breed] of turtle t = thieves [
+          ask cop t [
+            lt 90
+            set-vision-radii-thieves t
+          ]
+         ]
+      ]
+      ]
 
-  ask patches [
-    set pcolor white
+   ]
   ]
+  [ ;if a door is in sight, go to this door
 
-  ; outer borders
-  ask patches with [pxcor = min-pxcor or pxcor = max-pxcor or pycor = min-pycor or pycor = max-pycor] [
-    set pcolor black
-  ]
-
-  ; middle path
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 or pxcor = (max-pxcor - min-pxcor) / 2 + 3] [
-    set pcolor black
-  ]
-
-  ; left rooms
-  ask patches with [pycor = (max-pycor - min-pycor) / 2 - 5 or pycor = (max-pycor - min-pycor) / 2 + 5 and ( pxcor > (max-pxcor - min-pxcor) / 2 + 3)] [
-    set pcolor black
-  ]
-
-  ; right rooms
-  ask patches with [pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 12 and ( pxcor < (max-pxcor - min-pxcor) / 2 - 3)] [
-    set pcolor black
-  ]
-
-  ; doors outside
-  ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor or pycor = min-pycor)] [
-    set pcolor red
-  ]
-
-  ; doors in environment - right side
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and (pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 10 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
-    set pcolor blue
-  ]
-
-  ; doors in environment - left side
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and (pycor = (max-pycor - min-pycor) / 2 + 3 or pycor = (max-pycor - min-pycor) / 2 + 14 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
-    set pcolor blue
   ]
 end
 
-to setup-rooms
 
-  set room_dict table:make
-  ask patches [
-    table:put room_dict list pxcor pycor 0
-  ]
+to setup-rooms
 
   ; room 1 (left lower corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > min-pycor and pycor < (max-pycor - min-pycor) / 2 ] [
@@ -399,6 +785,75 @@ to setup-rooms
   ; room 7 (left upper corner)
   ask patches with [pxcor > min-pxcor and pxcor < (max-pxcor - min-pxcor) / 2 - 3 and pycor > (max-pycor - min-pycor) / 2 + 12 and pycor < max-pycor] [
     table:put room_dict list pxcor pycor 7
+  ]
+end
+
+; --- Setup patches ---
+to setup-patches
+  ; In this method you may create the environment (patches), using colors to define dirty and cleaned cells.
+  ; This might be another way how to do it witout hard coding: http://ccl.northwestern.edu/netlogo/models/community/maze-maker-2004
+
+  set room_dict table:make
+  ask patches [
+    table:put room_dict list pxcor pycor 0
+  ]
+
+  ask patches [
+    set pcolor white
+  ]
+
+  ; outer borders
+  ask patches with [pxcor = min-pxcor or pxcor = max-pxcor or pycor = min-pycor or pycor = max-pycor] [
+    set pcolor black
+  ]
+
+  ; middle path
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 or pxcor = (max-pxcor - min-pxcor) / 2 + 3] [
+    set pcolor black
+  ]
+
+  ; left rooms
+  ask patches with [pycor = (max-pycor - min-pycor) / 2 - 5 or pycor = (max-pycor - min-pycor) / 2 + 5 and ( pxcor > (max-pxcor - min-pxcor) / 2 + 3)] [
+    set pcolor black
+  ]
+
+  ; right rooms
+  ask patches with [pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 12 and ( pxcor < (max-pxcor - min-pxcor) / 2 - 3)] [
+    set pcolor black
+  ]
+
+  ; doors outside
+  ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor or pycor = min-pycor)] [
+    set pcolor red
+    table:put room_dict list pxcor pycor 2 ; in this version these two doors belong to the hall way
+  ]
+
+  ; doors in environment - right side
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and (pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 10 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
+    let i 0
+    set pcolor blue
+    ; assign door patches to rooms
+    if i = 0 [
+      table:put room_dict list pxcor pycor 5 ]
+    if i = 1 [
+      table:put room_dict list pxcor pycor 4 ]
+    if i = 2 [
+      table:put room_dict list pxcor pycor 3 ]
+    set i i + 1
+  ]
+
+  ; doors in environment - left side
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and (pycor = (max-pycor - min-pycor) / 2 + 3 or pycor = (max-pycor - min-pycor) / 2 + 14 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
+    set pcolor blue
+    ; assign door patches to rooms
+    let j 0
+    if j = 0 [
+      table:put room_dict list pxcor pycor 6 ]
+    if j = 1 [
+      table:put room_dict list pxcor pycor 7 ]
+    if j = 2 [
+      table:put room_dict list pxcor pycor 1 ]
+    set j j + 1
   ]
 end
 @#$#@#$#@
@@ -455,7 +910,7 @@ num_customers
 num_customers
 0
 300
-73
+111
 1
 1
 NIL
@@ -638,6 +1093,23 @@ radius-cops
 1
 NIL
 HORIZONTAL
+
+BUTTON
+359
+60
+422
+93
+NIL
+go
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
