@@ -217,7 +217,7 @@ to set-vision-radii-cops [c]
        let clean_x item 0 ?
        let clean_y item 1 ?
        ask patches with [pxcor = clean_x and pycor = clean_y] [
-         if (pcolor != blue or pcolor != red) [
+         if (pcolor != blue and pcolor != red) [
            set pcolor white
          ]
        ]
@@ -250,7 +250,7 @@ to set-vision-radii-thieves [t]
        let clean_x item 0 ?
        let clean_y item 1 ?
        ask patches with [pxcor = clean_x and pycor = clean_y] [
-         if (pcolor != blue or pcolor != red) [
+         if (pcolor != blue and pcolor != red) [
            set pcolor white
          ]
        ]
@@ -456,6 +456,7 @@ end
 
 to update-intentions-cops
   ask cops [
+    print belief_seeing_thief
     ifelse belief_seeing_thief = [] [ ; hasn't seen thief
       ifelse intention = observe_environment [
         set intention move_around
@@ -466,15 +467,21 @@ to update-intentions-cops
     [ ifelse messages != [] [
         set intention inform_colleague
       ]
-      [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
-        let thief_x item 0 thief_coord
-        let thief_y item 1 thief_coord
-        ifelse distancexy thief_x thief_y < 0.5 [
-          set intention catch_thief
+      [ ifelse intention = chase_thief [
+          set intention observe_environment
         ]
-        [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+        [let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
+         let thief_x item 0 thief_coord
+         let thief_y item 1 thief_coord
+         ifelse distancexy thief_x thief_y < 5 [
+           print "INTENTION TO CATCH"
+           set intention catch_thief
+         ]
+         [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+        ]
       ]
     ]
+
   print "intention cop"
   print intention
   ]
@@ -489,7 +496,7 @@ end
 to execute-actions-thieves
   ask thieves [
     if intention = move_around [
-      ;move-around-thief who
+      move-around-thief who
     ]
 
     if intention = move_to_item [
@@ -601,8 +608,7 @@ to move-around-thief [i]
         ]
     ]
     [ if [breed] of turtle i = thieves [
-        ask thief i [
-          lt 90
+        ask thief i [           lt 90
           set-vision-radii-thieves i
         ]
        ]
@@ -619,18 +625,33 @@ to observe-environment-cops [c]
    foreach vision_radius [
      let x_cor item 0 ?
      let y_cor item 1 ?
-     ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
-       ask turtles with [xcor = x_cor and ycor = y_cor] [
-          if breed = thieves [
-            ask cop c [
-              if (member? (list x_cor y_cor) seen_thieves = false) [ ; check whether not in belief base already
-                set seen_thieves lput(list x_cor y_cor) seen_thieves ; add coordinates of thief to belief base
+     ;ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
+     ask patches with [distancexy x_cor y_cor < 5 and any? other turtles-here] [
+       ask turtles with [breed = thieves] [
+         let thief_x xcor
+         let thief_y ycor
+         if distancexy x_cor y_cor < 5 [
+           ask cop c [
+              if (member? (list thief_x thief_y) seen_thieves = false) [ ; check whether not in belief base already
+                set seen_thieves lput(list thief_x thief_y) seen_thieves ; add coordinates of thief to belief base
               ]
             ] ; this list is sorted later on
-
-          ]
+         ]
        ]
      ]
+
+
+       ;ask turtles with [xcor = x_cor and ycor = y_cor] [
+       ;   if breed = thieves [
+       ;     ask cop c [
+       ;       if (member? (list x_cor y_cor) seen_thieves = false) [ ; check whether not in belief base already
+       ;         set seen_thieves lput(list x_cor y_cor) seen_thieves ; add coordinates of thief to belief base
+       ;       ]
+       ;     ] ; this list is sorted later on
+
+       ;   ]
+       ;]
+     ;]
    ]
 
    foreach seen_thieves [
@@ -677,18 +698,21 @@ end
 
 to chase-thief [c]
   let my_pos list floor(xcor) floor(ycor)
-  let follow_pos item 0 belief_seeing_thief
+  let follow_pos_it item 0 belief_seeing_thief
+  let follow_pos list floor(item 0 follow_pos_it) floor(item 1 follow_pos_it)
   new-pos my_pos follow_pos
 
   ask patch-ahead 1 [
     ifelse not any? customers-on self [
       ask cop c [
         forward 1
+        set-vision-radii-cops c
       ]
     ]
     [ ask cop c [
         lt 90
         forward 1
+        set-vision-radii-cops c
       ]
     ]
   ]
@@ -698,7 +722,7 @@ to catch-thief [c] ; sometimes this doesn't seem to work, but I don't know when 
   let x_cor xcor
   let y_cor ycor
   ask thieves [
-    if distancexy x_cor y_cor < 0.5 [
+    if distancexy x_cor y_cor < 5 [
       die
     ]
   ]
@@ -727,8 +751,7 @@ to new-pos [my_pos follow_pos] ; function gets the position to be followed and t
 end
 
 to move-to-item [t]
- if xcor != item_x and ycor != item_y [
-    forward 1
+ if xcor != item_x and ycor != item_y [    forward 1
     set-vision-radii-thieves t
   ]
 
@@ -939,7 +962,7 @@ num_customers
 num_customers
 0
 300
-111
+0
 1
 1
 NIL
@@ -1054,10 +1077,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-359
-253
-531
-286
+362
+252
+534
+285
 radius-thieves
 radius-thieves
 0
@@ -1109,10 +1132,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-363
-318
-535
-351
+366
+317
+538
+350
 radius-cops
 radius-cops
 0
