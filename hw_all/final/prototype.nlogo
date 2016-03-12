@@ -62,7 +62,8 @@ customers-own [ move_around ]
 cops-own [beliefs desire intention view vision_radius strength speed radius
   move_around observe_environment inform_colleague receive_message
   chase_thief catch_thief escort_thief look_for_thief
-  belief_seeing_thief belief_room belief_outside_door seen_thieves]
+  belief_seeing_thief belief_room belief_outside_door seen_thieves
+  messages sent_messages]
 ; view: how many patches forward
 ; vision_radius: all patches he can see
 
@@ -137,9 +138,6 @@ to go
     setup-thieves
     setup-cops
   ]
-  ask cops [
-    ;print belief_seeing_thief
-  ]
   update-desires
   update-beliefs
   update-intentions-cops
@@ -173,6 +171,8 @@ to place-cop-manually
       set heading 0 ; delete, this is just for debugging
       set view 90
       set seen_thieves []
+      set messages []
+      set sent_messages []
       set vision_radius []
       set-vision-radii-cops who
       setup-beliefs-cops who
@@ -351,8 +351,7 @@ to update-beliefs
  ;
  ask cops [
    set belief_seeing_thief seen_thieves
-   print belief_seeing_thief
-
+   set belief_seeing_thief sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_thief
  ]
 
 
@@ -419,14 +418,21 @@ to update-intentions-cops
       [ set intention observe_environment ]
     ]
     ; has seen thief
-    [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
-      let thief_x item 0 thief_coord
-      let thief_y item 1 thief_coord
-
-      ifelse floor(xcor) = thief_x and floor(ycor) = thief_y [
-        set intention catch_thief
+    [ ifelse messages != [] [
+        set intention inform_colleague
       ]
-      [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+      [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
+        let thief_x item 0 thief_coord
+        let thief_y item 1 thief_coord
+
+        print thief_x
+        print thief_y
+
+        ifelse floor(xcor) = thief_x and floor(ycor) = thief_y [
+          set intention catch_thief
+        ]
+        [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+      ]
     ]
   ;print "intention cop"
   ;print intention
@@ -445,6 +451,10 @@ end
 
 to execute-actions-cops
   ask cops [
+    if intention = send_message [
+      send-message who
+    ]
+
     if intention = move_around [
       move-around who
     ]
@@ -460,6 +470,12 @@ to execute-actions-cops
     if intention = catch_thief [
       catch-thief who
     ]
+  ]
+end
+
+to send-message [c]
+  ask cop c [
+
   ]
 end
 
@@ -508,34 +524,46 @@ to observe-environment-cops [c]
               if (member? (list x_cor y_cor) seen_thieves = false) [ ; check whether not in belief base already
                 set seen_thieves lput(list x_cor y_cor) seen_thieves ; add coordinates of thief to belief base
               ]
-            ]
-           ; do we want to sort this list, or do we want to stick to following the first?
+            ] ; this list is sorted later on
 
           ]
        ]
      ]
    ]
 
+   foreach seen_thieves [
+     if (member? ? sent_messages = false) [
+       set messages seen_thieves
+     ]
+   ]
+
+
+
 end
 
 to chase-thief [c]
-
   let my_pos list floor(xcor) floor(ycor)
   let follow_pos item 0 belief_seeing_thief
   new-pos my_pos follow_pos
-  ; TO DO: don't walk through customers!! --> similar code as before
-  forward 1
 
-  ; chase thief
+  ask patch-ahead 1 [
+    ifelse not any? customers-on self [
+      ask cop c [
+        forward 1
+      ]
+    ]
+    [ ask cop c [
+        lt 90
+        forward 1
+      ]
+    ]
+  ]
 end
 
-to catch-thief [c]
+to catch-thief [c] ; sometimes this doesn't seem to work, but I don't know when exactly --> guess when the one cop already caught the thief --> send message that the thief has been caught
   let x_cor floor(xcor)
   let y_cor floor(ycor)
   ask thieves with [xcor = x_cor and ycor = y_cor] [die] ; this might be a bit of a severe punishment ;)
-
-  ; catch thief
-
 end
 
 ; note: the belief base of the cop needs to be updated by the new position of the thief all the time
