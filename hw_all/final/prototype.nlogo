@@ -423,7 +423,7 @@ to update-intentions-cops
       let thief_x item 0 thief_coord
       let thief_y item 1 thief_coord
 
-      ifelse xcor = thief_x and ycor = thief_y [
+      ifelse floor(xcor) = thief_x and floor(ycor) = thief_y [
         set intention catch_thief
       ]
       [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
@@ -454,11 +454,11 @@ to execute-actions-cops
     ]
 
     if intention = chase_thief [
-      chase-thief
+      chase-thief who
     ]
 
     if intention = catch_thief [
-      catch-thief
+      catch-thief who
     ]
   ]
 end
@@ -518,16 +518,28 @@ to observe-environment-cops [c]
 
 end
 
-to chase-thief
+to chase-thief [c]
+
+  let my_pos list floor(xcor) floor(ycor)
+  let follow_pos item 0 belief_seeing_thief
+  new-pos my_pos follow_pos
+  ; TO DO: don't walk through customers!! --> similar code as before
+  forward 1
+
   ; chase thief
 end
 
-to catch-thief
+to catch-thief [c]
+  let x_cor floor(xcor)
+  let y_cor floor(ycor)
+  ask thieves with [xcor = x_cor and ycor = y_cor] [die] ; this might be a bit of a severe punishment ;)
+
   ; catch thief
+
 end
 
 ; note: the belief base of the cop needs to be updated by the new position of the thief all the time
-to new_pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
+to new-pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
 
   let my_room_patch table:get room_dict my_pos
   let follow_room_patch table:get room_dict follow_pos
