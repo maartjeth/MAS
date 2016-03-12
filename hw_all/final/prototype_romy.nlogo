@@ -707,7 +707,6 @@ to steal-item [t]
   ; if you found an item, steal it
   if pcolor != white [
     set pcolor white
-    ; also remove item from belief_items?
     ]
 end
 
