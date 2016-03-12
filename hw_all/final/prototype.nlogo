@@ -17,6 +17,8 @@
 ; cops can still walk through the wall --> sometimes??? most of the time they do change direction
 ; sometimes new position thiefs gives error --> pos to -1
 
+; now i've set the benchmark of seeing and catching a thief to 5, don't really know what this value is. At least now he's actually catching thieves.
+
 
 ; DONE
 ; Setup floor
@@ -144,8 +146,8 @@ to go
     setup-thieves
     setup-cops
   ]
-  update-desires
   update-beliefs
+  update-desires
   update-intentions-cops
   update-intentions-thieves
   execute-actions-cops
@@ -328,6 +330,10 @@ end
 to update-desires
   ; You should update your agent's desires here.
   ask cops [
+    ifelse belief_seeing_thief = [] [
+      set desire look_for_thief
+    ]
+    [ set desire catch_thief ]
 
   ]
 
@@ -456,8 +462,8 @@ end
 
 to update-intentions-cops
   ask cops [
-    print belief_seeing_thief
-    ifelse belief_seeing_thief = [] [ ; hasn't seen thief
+
+    ifelse (desire = look_for_thief) [ ; hasn't seen thief  ; actually this AND shouldn't be needed?
       ifelse intention = observe_environment [
         set intention move_around
       ]
