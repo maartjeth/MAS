@@ -12,6 +12,8 @@
 ; Cops: follow thieves
 ; Thieves: get item, escape
 ; update vision radius while moving
+; communcation
+; customers should move a bit --> for example random sample moves 1 forward in a random direction per tick
 
 
 ; DONE
@@ -21,6 +23,7 @@
 ; Cops in environment
 ; Cops and thieves have vision radius
 ; Cops: find thieves in vision radius
+; Cops: moves around randomly when no thieves observed --> doesn't walk through wall, doesn't walk through customers
 
 
 extensions [table]
@@ -59,7 +62,7 @@ customers-own [ move_around ]
 cops-own [beliefs desire intention view vision_radius strength speed radius
   move_around observe_environment inform_colleague receive_message
   chase_thief catch_thief escort_thief look_for_thief
-  belief_seeing_thief belief_room belief_outside_door]
+  belief_seeing_thief belief_room belief_outside_door seen_thieves]
 ; view: how many patches forward
 ; vision_radius: all patches he can see
 
@@ -109,6 +112,7 @@ to setup-cops
   ask cops [
     ; beliefs
 
+
     ; desires
     set look_for_thief "look_for_thief"
     set catch_thief "catch_thief"
@@ -130,7 +134,6 @@ end
 to go
   ; This method executes the main processing cycle of an agent.
   if ticks = 0 [
-    setup-vision-radii
     setup-thieves
     setup-cops
   ]
@@ -169,7 +172,9 @@ to place-cop-manually
       set shape "person"
       set heading 0 ; delete, this is just for debugging
       set view 90
+      set seen_thieves []
       set vision_radius []
+      set-vision-radii-cops who
       setup-beliefs-cops who
       setup-desires-cops who
       ]
@@ -187,6 +192,7 @@ to place-thief-manually
 
       set view 90
       set vision_radius []
+      set-vision-radii-thieves who
       setup-beliefs-thieves who
       setup-desires-thieves who
       ]
@@ -195,18 +201,27 @@ to place-thief-manually
 end
 
 ; NOTE: we do have some questionable vision radii every now and then...
-to setup-vision-radii
+to set-vision-radii-cops [c]
   ; set up radius cops
-  ask cops [
-    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
-    let c who
+  ask cop c [
 
+    ; remove current vision radius
+    foreach vision_radius [
+       let clean_x item 0 ?
+       let clean_y item 1 ?
+       ask patches with [pxcor = clean_x and pycor = clean_y] [
+         set pcolor white
+       ]
+    ]
+
+    set vision_radius [] ; empty this thing here
+    let cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
 
     ask patches in-cone radius-cops view [
       let patch_coord list pxcor pycor
       let room_patch table:get room_dict patch_coord
 
-      if room_patch = cop_room [
+      if room_patch = cop_room and pcolor != black [
         ask cop c [
           set vision_radius lput (patch_coord) vision_radius
         ]
@@ -214,18 +229,30 @@ to setup-vision-radii
       ]
     ]
   ]
+end
 
+to set-vision-radii-thieves [t]
   ; set up vision radius thieves
 
-  ask thieves [
+  ask thief t [
+
+    ; remove current vision radius
+    foreach vision_radius [
+       let clean_x item 0 ?
+       let clean_y item 1 ?
+       ask patches with [pxcor = clean_x and pycor = clean_y] [
+         set pcolor white
+       ]
+    ]
+
+    set vision_radius [] ; empty this thing here
     let thief_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
-    let t who
 
     ask patches in-cone radius-thieves view [
       let patch_coord list pxcor pycor
       let room_patch table:get room_dict patch_coord
 
-      if room_patch = thief_room [
+      if room_patch = thief_room and pcolor != black [
         ask thief t [
           set vision_radius lput (patch_coord) vision_radius
         ]
@@ -323,27 +350,8 @@ to update-beliefs
 
  ;
  ask cops [
-   ; add thiefs to belief base cops
-   let c who
-   foreach vision_radius [
-     let x_cor item 0 ?
-     let y_cor item 1 ?
-     ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
-       ask turtles with [xcor = x_cor and ycor = y_cor] [
-          if breed = thieves [
-            ;print "found a thief"
-            ask cop c [
-              if (member? (list x_cor y_cor) belief_seeing_thief = false) [ ; check whether not in belief base already
-                set belief_seeing_thief lput(list x_cor y_cor) belief_seeing_thief ; add coordinates of thief to belief base
-                ;print belief_seeing_thief
-              ]
-            ]
-           ; do we want to sort this list, or do we want to stick to following the first?
-
-          ]
-       ]
-     ]
-   ]
+   set belief_seeing_thief seen_thieves
+   print belief_seeing_thief
 
  ]
 
@@ -442,7 +450,7 @@ to execute-actions-cops
     ]
 
     if intention = observe_environment [
-      observe-environment
+      observe-environment-cops who
     ]
 
     if intention = chase_thief [
@@ -457,31 +465,57 @@ end
 
 
 to move-around [i]
-  ; to check if turtle reaches a wall --> only works for cops now
+  ; to check if turtle reaches a wall --> only works for cops now (for clarity we can also decide to make two move-arounds; one for cops and one for thiefs
   ask patch-ahead 1 [
     ifelse pcolor = black [
-      if [breed] of turtle i = cops [
+      if [breed] of turtle i = cops [ ; FOR THIEF: ask thief if breed is thief
         ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
           lt 180
           forward 1
           lt random 90
+          set-vision-radii-cops i
         ]
       ]
+    ]
+    [ ifelse not any? customers-on self and [breed] of turtle i = cops [
+        ask cop i [
+          forward 1
+          set-vision-radii-cops i
+        ]
     ]
     [ if [breed] of turtle i = cops [
         ask cop i [
-          forward 1
+          lt 90
+          set-vision-radii-cops i
         ]
-      ]
+       ]
     ]
-  ]
+    ]
 
-
-
+ ]
 end
 
-to observe-environment
-  ; observe environment
+to observe-environment-cops [c]
+
+  ; check whether you see at thief
+   foreach vision_radius [
+     let x_cor item 0 ?
+     let y_cor item 1 ?
+     ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
+       ask turtles with [xcor = x_cor and ycor = y_cor] [
+          if breed = thieves [
+            ask cop c [
+              if (member? (list x_cor y_cor) seen_thieves = false) [ ; check whether not in belief base already
+                set seen_thieves lput(list x_cor y_cor) seen_thieves ; add coordinates of thief to belief base
+              ]
+            ]
+           ; do we want to sort this list, or do we want to stick to following the first?
+
+          ]
+       ]
+     ]
+   ]
+
 end
 
 to chase-thief
