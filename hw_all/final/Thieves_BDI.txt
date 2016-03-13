@@ -2,7 +2,7 @@ Thieves BDI framework
 
 Beliefs: cops, rooms&doors, items
 desires: steal, flight
-intentions: move_around, move_to_item, observe_environment, drop_item, escape
+intentions: move_around, move_to_item, observe_environment, steal_item, escape
 
 belief_cops: [copID, x, y]
 belief_rooms_doors: [roomID[doorx, doory, soort]]

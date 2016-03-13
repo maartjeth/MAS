@@ -1,0 +1,40 @@
+Setup --> setup patches, setup rooms, setup ticks, setup customers
+
+Setup customers
+setup thieves
+setup cops
+
+go --> setup thieves, setup cops, update desires, update beliefs, update intentions cops, update intentions thieves, execute actions cops, execute actions thieves
+
+place item manually
+place cop manually --> setup beliefs cops, setup desires cops
+place thief manually --> setup beliefs thieves, setup desires thieves
+
+set vision radii cops
+set vision radii thieves
+
+setup ticks
+
+setup beliefs cops
+setup beliefs thieves
+setup desires cops
+setup desires thieves
+setup intentions
+
+update desires
+update beliefs
+update intentions thieves
+update intentions cops
+
+execute actions thieves
+execute actions cops
+
+move around
+observe environment
+chase thief
+catch thief
+new pos
+pickup item
+
+setup rooms
+setup patches
