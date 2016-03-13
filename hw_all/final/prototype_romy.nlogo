@@ -13,7 +13,8 @@
 ; update seen thieves so that it can work with thieves that move
 ; cops can still walk through the wall --> sometimes? most of the time they do change direction
 ; sometimes new position thiefs gives error --> pos to -1
-
+; make the monitors working when changing the number of customers (now they only work if the total number of customers is 150)
+; When a thief is arrested, he disappears. This results in an error because the thief does not exist anymore. -> need to solve ;)
 
 ; DONE
 ; Setup floor
@@ -302,6 +303,7 @@ end
 to setup-beliefs-thieves [t]
   ask thief t [
      set belief_seeing_cop []
+     set belief_items []
   ]
 end
 
@@ -378,7 +380,7 @@ to update-beliefs
      ;]
    ][ ; assumption: a thief can only see 1 door at a time
       ;print belief_room
-     ifelse table:get belief_room current_room = 0[
+     ifelse table:get belief_room current_room = (list current_room 0)[
        table:put belief_room current_room seen_doors
      ][
        let old_value table:get belief_room current_room
@@ -474,7 +476,7 @@ to update-intentions-cops
          let thief_x item 0 thief_coord
          let thief_y item 1 thief_coord
          ifelse distancexy thief_x thief_y < 1 [
-           print "INTENTION TO CATCH"
+           ;print "INTENTION TO CATCH"
            set intention catch_thief
          ]
          [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
@@ -482,8 +484,8 @@ to update-intentions-cops
       ]
     ]
 
-  print "intention cop"
-  print intention
+  ;print "intention cop"
+  ;print intention
   ]
 
 
@@ -559,7 +561,7 @@ end
 
 to move-around [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 1 [
+  ask patch-ahead 1.5 [ ; to make sure that the cop does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = cops [
         ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
@@ -590,7 +592,7 @@ end
 
 to move-around-thief [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 1 [
+  ask patch-ahead 1.5 [  ;1.5 to make sure that the thief does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = thieves [
         ask thief i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
@@ -608,7 +610,8 @@ to move-around-thief [i]
         ]
     ]
     [ if [breed] of turtle i = thieves [
-        ask thief i [           lt 90
+        ask thief i [
+          lt 90
           set-vision-radii-thieves i
         ]
        ]
@@ -891,9 +894,9 @@ to setup-patches
     ; assign door patches to rooms
     let j 0
     if j = 0 [
-      table:put room_dict list pxcor pycor (list 6 2)]
-    if j = 1 [
       table:put room_dict list pxcor pycor (list 7 2)]
+    if j = 1 [
+      table:put room_dict list pxcor pycor (list 6 2)]
     if j = 2 [
       table:put room_dict list pxcor pycor (list 1 2)]
     set j j + 1
@@ -901,9 +904,9 @@ to setup-patches
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
-624
+620
 10
-1167
+1163
 574
 -1
 -1
@@ -945,10 +948,10 @@ NIL
 1
 
 SLIDER
-8
-193
-180
-226
+3
+161
+175
+194
 num_customers
 num_customers
 0
@@ -1028,20 +1031,20 @@ NIL
 1
 
 TEXTBOX
-10
-232
-160
-250
+5
+196
+155
+214
 Setup thieves
 11
 0.0
 1
 
 SLIDER
-9
-251
-181
-284
+4
+215
+176
+248
 max-speed-thieves
 max-speed-thieves
 0
@@ -1053,25 +1056,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-185
-252
+180
+216
+352
+249
+max-strength-thieves
+max-strength-thieves
+0
+10
+5
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
 357
-285
-max-strength-thieves
-max-strength-thieves
-0
-10
-5
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-362
-252
-534
-285
+216
+529
+249
 radius-thieves
 radius-thieves
 0
@@ -1083,20 +1086,20 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-8
-295
-158
-313
+5
+250
+155
+268
 Setup cops
 11
 0.0
 1
 
 SLIDER
-9
-315
-181
-348
+6
+270
+178
+303
 max-speed-cops
 max-speed-cops
 0
@@ -1108,10 +1111,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-185
-317
-357
-350
+182
+272
+354
+305
 max-strength-cops
 max-strength-cops
 0
@@ -1123,15 +1126,15 @@ NIL
 HORIZONTAL
 
 SLIDER
-366
-317
-538
-350
+363
+272
+535
+305
 radius-cops
 radius-cops
 0
 10
-10
+5
 1
 1
 NIL
@@ -1163,6 +1166,160 @@ First click on setup, than place items, cops and thieves. Ready? Start the simul
 11
 0.0
 1
+
+MONITOR
+7
+309
+208
+354
+Beliefs about seeing thief of cop 1
+[belief_seeing_thief] of cop 150
+17
+1
+11
+
+MONITOR
+212
+309
+390
+354
+Desire of cop 1
+[desire] of cop 150
+17
+1
+11
+
+MONITOR
+394
+309
+568
+354
+Intention of cop 1
+[intention] of cop 150
+17
+1
+11
+
+MONITOR
+8
+359
+209
+404
+Beliefs about seeing thief of cop 2
+[belief_seeing_thief] of cop 151
+17
+1
+11
+
+MONITOR
+212
+358
+390
+403
+Desire of cop 2
+[desire] of cop 151
+17
+1
+11
+
+MONITOR
+394
+358
+568
+403
+Intention of cop 2
+[intention] of cop 151
+17
+1
+11
+
+MONITOR
+8
+418
+209
+463
+Beliefs about seeing cop of thief 1
+[belief_seeing_cop] of thief 152
+17
+1
+11
+
+MONITOR
+212
+418
+433
+463
+Beliefs about seeing an item of thief 1
+[belief_items] of thief 152
+17
+1
+11
+
+MONITOR
+110
+468
+272
+513
+Desire of thief 1
+[desire] of thief 152
+17
+1
+11
+
+MONITOR
+275
+468
+444
+513
+Intention of thief 1
+[intention] of thief 152
+17
+1
+11
+
+MONITOR
+4
+517
+205
+562
+Beliefs about seeing cop of thief 2
+[belief_seeing_cop] of thief 153
+17
+1
+11
+
+MONITOR
+211
+517
+432
+562
+Beliefs about seeing an item of thief 2
+[belief_items] of thief 153
+17
+1
+11
+
+MONITOR
+109
+565
+268
+610
+Desire of thief 2
+[desire] of thief 153
+17
+1
+11
+
+MONITOR
+272
+566
+390
+611
+Intention of thief 2
+[intention] of thief 153
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
