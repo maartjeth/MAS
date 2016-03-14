@@ -81,7 +81,7 @@ cops-own [desire intention view vision_radius strength speed
   move_around observe_environment inform_colleague receive_message
   chase_thief catch_thief escort_thief look_for_thief
   belief_seeing_thief belief_rooms_doors seen_thieves
-  messages sent_messages current_room seen_doors route_outside thief_caught escort_thief_outside]
+  messages sent_messages current_room seen_doors]
 
 ; desire:
 ; intention:
@@ -104,9 +104,7 @@ cops-own [desire intention view vision_radius strength speed
 ; sent_messages
 ; current_room
 ; seen_doors
-; route_outside
-; thief_caught
-; escort_thief_outside
+
 
 thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention strength speed items steal flight
   move_around observe_environment move_to_item steal_item escape view vision_radius seen_cops
@@ -180,7 +178,6 @@ to setup-cops
     ; desires
     set look_for_thief "look_for_thief"
     set catch_thief "catch_thief"
-    set escort_thief "escort_thief_outside"
 
     ; intentions
     set move_around "move_around"
@@ -239,14 +236,12 @@ to place-cop-manually
       set sent_messages []
       set vision_radius []
       set seen_doors []
-      ; belief --> TO DO should be the same as room_dict!
+      ; belief --> From the start, you know in which room you are, but you do not know the doors. Should be moved to setup beliefs.
       set belief_rooms_doors table:make
       table:put belief_rooms_doors (table:get room_dict list floor(xcor) floor(ycor)) 0
-      set route_outside [[1 2][2][3 2][4 2][5 2][6 2][7 2]]
       set-vision-radii-cops who
       setup-beliefs-cops who
       setup-desires-cops who
-      set thief_caught false
       ]
     stop
   ]
@@ -400,7 +395,6 @@ end
 to update-desires
   ; If the cop has not seen a thief yet, it should look for it --> to do, of als hij geen recente locatie heeft!
   ; Else it should try to catch the thief
-  ; If the thief is caught, it should be escorted outside
   ask cops [
     ifelse belief_seeing_thief = [] [
       set desire look_for_thief
@@ -563,14 +557,13 @@ to update-intentions-cops
       ]
       [ set intention observe_environment ]
     ]
-    ; has seen thief, thus desire = catch thief
+    ; has seen thief
     [ ifelse messages != [] [
         set intention inform_colleague
       ]
       [ ifelse intention = chase_thief [
           set intention observe_environment
-        ] ; hier moet ifelse bij voor intention escort_thief --> als hij thief caught is true en niet bij buitendeur en desire escort_thief_outside, set to escort_thief.
-          ; if intention = escort outside en bij buitendoor: zet thief_caught op false en set intention op move_around, om een nieuwe dief te zoeken.
+        ]
         [let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
          let thief_x item 0 thief_coord
          let thief_y item 1 thief_coord
@@ -640,10 +633,6 @@ to execute-actions-cops
 
     if intention = catch_thief [
       catch-thief who
-    ]
-
-    if intention = escort_thief [
-      escort-thief who
     ]
   ]
 end
@@ -838,8 +827,10 @@ to chase-thief [c]
 end
 
 to catch-thief [c]
+  let x_cor xcor
+  let y_cor ycor
   ask thieves [
-    if distancexy xcor ycor < 5 [
+    if distancexy x_cor y_cor < 5 [
       die
     ]
   ]
@@ -851,28 +842,6 @@ to catch-thief [c]
 
 end
 
-to escort-thief [c]
-  ask cops[
-    ; here the cop figures out which way to go to escort the thief outside to the police van
-
-    ; find the best route from your room
-    let way_out item (current_room -1) route_outside
-
-    ; if you are in a room with a door leading outside, go to it
-    ifelse length way_out = 1[
-       table:get belief_room_doors current_room
-       ;go to door
-    ][ ; else, go to the next room in your way_out
-      ; go to next room
-    ]
-  ]
-end
-
-    ;check voor jouw kamer wat de weg naar buiten is.
-    ;    if je in het laatste cijfer/kamerID vd lijst bent, dan ga naar buitendeur (dichtstbijzijnde deur met xcor ycor met (2 0))
-    ;    else zoek de deur die bij je huidige kamer hoort die als kamers current_room en next_room (local var) heeft.
-  ]
-
 ; note: the belief base of the cop needs to be updated by the new position of the thief all the time
 to new-pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
 
@@ -880,9 +849,9 @@ to new-pos [my_pos follow_pos] ; function gets the position to be followed and t
   let follow_room_patch table:get room_dict follow_pos
 
   if my_room_patch = follow_room_patch [ ; if you're at the same room, you can simply move towards the position
-    let x item 0 follow_pos
-    let y item 1 follow_pos
-    facexy x y
+    let x_ item 0 follow_pos
+    let y_ item 1 follow_pos
+    facexy x_ y_
   ]
 
   ; else --> check whether you know that where the door is --> move to the door
@@ -1033,7 +1002,7 @@ to setup-patches
   ; doors outside
   ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor or pycor = min-pycor)] [
     set pcolor red
-    table:put room_dict list pxcor pycor (list 2 0); in this version these two doors belong to the hall way and outside (0)
+    table:put room_dict list pxcor pycor 2 ; in this version these two doors belong to the hall way
   ]
 
   ; doors in environment - right side
