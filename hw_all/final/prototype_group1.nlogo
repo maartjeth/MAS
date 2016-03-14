@@ -425,6 +425,9 @@ to update-beliefs
 
    ;note in which room you are
    let new_room table:get room_dict list floor(xcor) floor(ycor)
+   if new_room = 0 [
+     set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
+   ]
 
    if current_room != new_room[
      set current_room new_room
@@ -432,7 +435,7 @@ to update-beliefs
 
    ; update belief about room and doors  = not working completely right now!
    ifelse table:has-key? belief_rooms_doors current_room[
-     if seen_doors != [][
+     if seen_doors != [] [
        ; check if the door already exists or not
        table:put belief_rooms_doors current_room seen_doors
        set seen_doors []
@@ -504,8 +507,8 @@ to update-intentions-thieves
 
   ask thieves [
 
-    print "INTENTION"
-    print intention
+   ; print "INTENTION"
+   ; print intention
 
     ifelse intention = move_around [
       set intention observe_environment
@@ -647,7 +650,7 @@ end
 
 to move-around [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 2 [ ; to make sure that the cop does not reach the wall
+  ask patch-ahead 1 [ ; to make sure that the cop does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = cops [
         ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
@@ -678,7 +681,7 @@ end
 
 to move-around-thief [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 2 [  ;1.5 to make sure that the thief does not reach the wall
+  ask patch-ahead 1 [  ;1.5 to make sure that the thief does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = thieves [
         ask thief i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
@@ -871,7 +874,7 @@ to escape-now [t]  ;This function is not yet finished!
     ask patch-ahead 1 [
       ifelse pcolor = black [
         if [breed] of turtle t = thieves [
-          ask thief t [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
+          ask thief t [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoids going through a wall
             lt 180
             forward 1
             lt random 90
@@ -886,7 +889,7 @@ to escape-now [t]  ;This function is not yet finished!
           ]
       ]
       [ if [breed] of turtle t = thieves [
-          ask cop t [
+          ask thief t [
             lt 90
             set-vision-radii-thieves t
           ]
