@@ -400,7 +400,7 @@ to update-desires
 
   ask thieves [
     ;if the thief has an item it will want to flee with it, else it will want to steal something
-    ifelse belief_items != [] [
+    ifelse items = true [
       set desire flight
     ][
       set desire steal_item
@@ -454,13 +454,23 @@ to update-beliefs
       let check_item_y item 1 check_items
       ask patch check_item_x check_item_y [
         if pcolor = white [
-          ask thief t [
-            if belief_items != [] [
-              print "reset belief_items"
-              set belief_items remove-item 0 belief_items
+          ask turtle t [
+            print breed
+            if breed = thieves [
+              print "test"
             ]
           ]
-       ]
+
+
+          ;if breed thief t = thieves[
+          ;  ask thief t [
+          ;    if belief_items != [] [
+          ;      print "reset belief_items"
+          ;      set belief_items remove-item 0 belief_items
+          ;    ]
+          ;  ]
+          ;]
+        ]
       ]
     ]
 
@@ -714,11 +724,26 @@ to observe-environment-cops [c]
 end
 
 to observe-environment-thieves [t]
-
-  ; check whether you see an agent
    foreach vision_radius [
      let x_cor item 0 ?
      let y_cor item 1 ?
+
+     ; check whether you see an item or a door
+     ask patches with [pxcor = x_cor and pycor = y_cor] [
+       if pcolor = orange[
+         print "orange patch"
+         ask thief t[
+           set belief_items lput(list xcor ycor) belief_items
+         ]
+       ]
+       if pcolor = blue[
+         ask thief t[
+           set seen_doors lput (list xcor ycor) seen_doors
+         ]
+       ]
+     ]
+
+     ; check whether you see an agent
      ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
        ask turtles with [xcor = x_cor and ycor = y_cor] [
           if breed = cops [
@@ -729,23 +754,6 @@ to observe-environment-thieves [t]
             ] ; this list is sorted later on
 
           ]
-       ]
-       if pcolor = orange[
-         ask thief t[
-           set belief_items lput(list xcor ycor) belief_items
-           print belief_items
-         ]
-       ]
-     ]
-     ;if pcolor = orange[
-     ;  ask thief t[
-     ;    set belief_items lput(list xcor ycor) belief_items
-     ;    print belief_items
-     ;  ]
-     ;]
-     if pcolor = blue[
-       ask thief t[
-         set seen_doors (list xcor ycor)
        ]
      ]
    ]
@@ -821,12 +829,11 @@ to move-to-item [t]
 end
 
 to steal-item [t]
-  ; if you found an item, steal it
-  if pcolor != white [
+  ; if you found an item, steal itter oifelse pcolor != white [
     set pcolor white
     ask thief t[
       set items true
-    ]
+   ..
   ]
 end
 
