@@ -203,6 +203,9 @@ to go
   update-intentions-thieves
   execute-actions-cops
   execute-actions-thieves
+  ask customers [
+    execute-actions-customers who
+  ]
   tick
 end
 
@@ -632,6 +635,26 @@ to execute-actions-cops
       catch-thief who
     ]
   ]
+end
+
+to execute-actions-customers [cust]
+  ask customer cust [
+    ;lt random 360
+    ask patch-ahead 1 [
+      ifelse pcolor != black and not any? turtles-on self [
+        ask customer cust [
+           forward 0.1
+        ]
+      ]
+      [ ask customer cust [
+          lt random 360
+        ]
+      ]
+    ]
+
+    set cust cust + 1
+  ]
+
 end
 
 to send-message [c]
