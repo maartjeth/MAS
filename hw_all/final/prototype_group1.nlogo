@@ -168,6 +168,8 @@ to setup-thieves
     set observe_environment "observe_environment"
     set steal_item "steal_item"
     set escape "escape"
+
+    set intention []
   ]
 end
 
@@ -369,7 +371,7 @@ end
 
 to setup-desires-thieves [t]
   ask thief t [
-    set desire steal_item
+    set desire steal
   ]
 end
 
@@ -403,8 +405,9 @@ to update-desires
     ifelse items = true [
       set desire flight
     ][
-      set desire steal_item
+      set desire steal
     ]
+    print desire
   ]
 end
 
@@ -436,7 +439,7 @@ to update-beliefs
      ]
    ][; assumption: a thief can only see 1 door at a time
      ; if you don't have any knowledge of doors yet, you can override the start value 0
-     ifelse table:get belief_rooms_doors current_room = (list current_room 0)[
+     ifelse table:get belief_rooms_doors current_room = (list current_room 0)[  ;NOTE THIS GIVES AN ERROR SOMETIMES --> when walking out of the door or through a wall and he shouldn't be able to do that
        table:put belief_rooms_doors current_room seen_doors
      ][
        ; else you need to keep your old knowledge and add the new to it
@@ -455,7 +458,7 @@ to update-beliefs
       ask patch check_item_x check_item_y [
         if pcolor = white [
           ask turtle t [
-            print breed
+            ;print breed
             if breed = thieves [
               print "test"
             ]
@@ -495,33 +498,47 @@ end
 to update-intentions-thieves
   ; You should update your agent's intentions here.
   ; The agent's intentions should be dependent on its beliefs and desires
+
+
+  ; NOTE, we don't have a final condition now
+
   ask thieves [
+
+    print "INTENTION"
+    print intention
+
+    ifelse intention = move_around [
+      set intention observe_environment
+    ]
+    [ set intention move_around ]
+
     ifelse intention = [] [
-    set intention move_around
-    ][
-      ifelse intention = move_around or intention = move_to_item or intention = escape[
-        set intention observe_environment
-      ][
-        ifelse items[
-          ifelse desire = flight[
-            set intention escape
-          ][
-            set intention [] ;idea: if the thief has an item, but doesn't want to flee, he is arrested?
+      set intention move_around
+    ]
+    [
+      ifelse desire = steal and belief_items != [] [ ; then items = false --> no need to check for belief_items = [] only because of netlogos stupid ifelse construction....
+        ; do your stuff to steal an item: move to item OR observe environment
+        ; no matter what, if you're at an item --> just steal it
+        let item_to_steal item 0 belief_items
+        ifelse distancexy item 0 item_to_steal item 1 item_to_steal < 0.5 [
+          set intention steal_item
+        ]
+        ; else: observe environment or move to item
+        [
+          ifelse intention = move_to_item [
+            set intention observe_environment
           ]
-        ][
-          ifelse belief_items = [][
-            set intention move_around
-          ][
-            ifelse distancexy (item 0 item 0 belief_items) (item 1 item 0 belief_items) > 0.5[
-              set intention move_to_item
-            ][
-              set intention steal_item
-            ]
-          ]
+          [ set intention move_to_item ]
+        ]
+      ]
+
+      [ if desire != steal [; ELSE: do your stuff to flight
+           set intention escape
         ]
       ]
     ]
   ]
+
 
 end
 
@@ -733,12 +750,12 @@ to observe-environment-thieves [t]
        if pcolor = orange[
          print "orange patch"
          ask thief t[
-           set belief_items lput(list xcor ycor) belief_items
+           set belief_items lput(list x_cor y_cor) belief_items
          ]
        ]
        if pcolor = blue[
          ask thief t[
-           set seen_doors lput (list xcor ycor) seen_doors
+           set seen_doors lput (list x_cor y_cor) seen_doors
          ]
        ]
      ]
@@ -815,29 +832,38 @@ to new-pos [my_pos follow_pos] ; function gets the position to be followed and t
 end
 
 to move-to-item [t]
+ print "move to item"
  ask thief t[
-   let first_item belief_items
+   let first_item item 0 belief_items ; assume this list is sorted and you move to the closest item
    let item_x item 0 first_item
    let item_y item 1 first_item
 
-   if xcor != item_x and ycor != item_y [
-     forward 1
-     set-vision-radii-thieves t
-   ]
+   facexy item_x item_y ; face in this direction --> still need to make sure you don't walk through customers
+   forward 1
+   set-vision-radii-thieves t
+
+   ;if xcor != item_x and ycor != item_y [
+   ;  print "forward 1"
+   ;  forward 1
+   ;  set-vision-radii-thieves t
+   ;]
  ]
 
 end
 
 to steal-item [t]
-  ; if you found an item, steal itter oifelse pcolor != white [
+  ; if you found an item, steal it
+  print "steal item"
+  if pcolor != white [
     set pcolor white
     ask thief t[
       set items true
-   ..
+    ]
   ]
 end
 
 to escape-now [t]  ;This function is not yet finished!
+  print "escape now"
   ; to check if turtle reaches a wall
   ifelse intention = escape ;no door in sight (now just rubbish for debugging)
 
