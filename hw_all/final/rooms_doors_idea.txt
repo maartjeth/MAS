@@ -1,0 +1,17 @@
+room_dict:
+[[xcor ycor] roomID]
+
+room_doors_dict:
+[roomID [[xcor ycor] room2]]
+
+belief_rooms:
+[roomID [[xcor ycor] room2]]
+
+Idea: 
+; get list with all keys from room_dict, aka all patch coordinates
+foreach table:keys room_dict
+	; if that key has a value with length 2, it is a door
+	if length table:get room_dict ? = 2[
+		; for room_doors_dict set the value to the room as key, and a list of 
+		; xcor ycor room2 as input
+		 something with --> table:set room_doors_dict table:get room_dict ?  
