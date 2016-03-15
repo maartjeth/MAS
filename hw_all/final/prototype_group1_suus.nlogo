@@ -56,7 +56,16 @@ globals [time
          stealable_item
          number_cops
          number_thieves
-         cop1 cop2 thief1 thief2]
+         cop1 cop2 thief1 thief2
+         escape_dict
+         coord_1
+         coord_2_1
+         coord_2_2
+         coord_3
+         coord_4
+         coord_5
+         coord_6
+         coord_7]
 
 ; time: the time elapsed during the simulation
 ; room_dict: a dictionary with all the rooms, and which patches belong to it (including doors)
@@ -85,7 +94,8 @@ cops-own [desire intention view vision_radius strength speed
   move_around observe_environment inform_colleague receive_message
   chase_thief catch_thief escort_thief look_for_thief
   belief_seeing_thief belief_rooms_doors seen_thieves
-  messages sent_messages current_room seen_doors route_outside thief_caught escort_thief_outside]
+  messages sent_messages current_room seen_doors thief_caught escort_thief_outside
+  escape_routes_cops caught_thief route_outside]
 
 ; desire:
 ; intention:
@@ -143,6 +153,8 @@ thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention
 to setup
   clear-all
   set time 0
+  set escape_dict table:make ; global variable as it's global information that is made when setting up the rooms and doors
+
   setup-patches
   setup-rooms
   setup-customers
@@ -195,6 +207,8 @@ to setup-cops
     set chase_thief "chase_thief"
     set catch_thief "catch_thief"
     set escort_thief "escort_thief"
+
+    set caught_thief false
   ]
 end
 
@@ -212,7 +226,7 @@ to go
   execute-actions-cops
   execute-actions-thieves
   ask customers [
-    execute-actions-customers who
+    ;execute-actions-customers who
   ]
   tick
 end
@@ -261,13 +275,15 @@ to place-cop-manually
 
       ; --> 2 opties: via patches of via dict. Via patches lastig met nesting, via dict lastig want hoe krijg je het eruit zonder key?
 
-      set route_outside [[1 2][2][3 2][4 2][5 2][6 2][7 2]]
+      ;set route_outside [[1 2][2][3 2][4 2][5 2][6 2][7 2]]
+      set escape_routes_cops escape_dict
+
       set-vision-radii-cops who
       setup-beliefs-cops who
       setup-desires-cops who
       set thief_caught false
       set number_cops number_cops + 1
-      set speed 1 + random (max-speed-cops)
+      set speed 1 ;+ random (max-speed-cops)
       set strength 1 + random (max-strength-cops)
       print speed
       ; the first to cops made can be followed with the monitors
@@ -302,7 +318,7 @@ to place-thief-manually
       setup-beliefs-thieves who
       setup-desires-thieves who
       set number_thieves number_thieves + 1
-      set speed 1 + random (max-speed-thieves)
+      set speed 1 ;+ random (max-speed-thieves)
       set strength 1 + random (max-strength-thieves)
       ; the first to thieves made can be followed with the monitors
       if number_thieves = 1 [
@@ -442,11 +458,14 @@ to update-desires
   ; Else it should try to catch the thief
   ; If the thief is caught, it should be escorted outside
   ask cops [
-    ifelse belief_seeing_thief = [] [
+    ifelse belief_seeing_thief = [] and caught_thief = false [
       set desire look_for_thief
     ]
-    [ set desire catch_thief ]
-
+    [ ifelse caught_thief = true [
+        set desire escort_thief_outside
+      ]
+      [ set desire catch_thief ]
+    ]
   ]
 
   ask thieves [
@@ -480,6 +499,8 @@ to update-beliefs
 
    if current_room != new_room[
      set current_room new_room
+     print "NEW CURRENT ROOM"
+     print current_room
    ]
 
    ; update belief about room and doors  = not working completely right now!
@@ -540,6 +561,16 @@ to update-beliefs
    set belief_seeing_thief sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_thief
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
 
+   ;note in which room you are
+   let new_room table:get room_dict list floor(xcor) floor(ycor)
+   if new_room = 0 [
+     set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
+   ]
+
+   if current_room != new_room[
+     set current_room new_room
+   ]
+
  ]
 
    ; update which door belongs to which room
@@ -597,7 +628,7 @@ end
 to update-intentions-cops
   ask cops [
 
-    ifelse (desire = look_for_thief) [ ; hasn't seen thief  ; actually this AND shouldn't be needed?
+    ifelse (desire = look_for_thief) [ ; hasn't seen thief
       ifelse intention = observe_environment [
         set intention move_around
       ]
@@ -607,18 +638,24 @@ to update-intentions-cops
     [ ifelse messages != [] [
         set intention inform_colleague
       ]
-      [ ifelse intention = chase_thief [
-          set intention observe_environment
-        ] ; hier moet ifelse bij voor intention escort_thief --> als hij thief caught is true en niet bij buitendeur en desire escort_thief_outside, set to escort_thief.
-          ; if intention = escort outside en bij buitendoor: zet thief_caught op false en set intention op move_around, om een nieuwe dief te zoeken.
-        [let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
-         let thief_x item 0 thief_coord
-         let thief_y item 1 thief_coord
-         ifelse distancexy thief_x thief_y < 1 [
-           ;print "INTENTION TO CATCH"
-           set intention catch_thief
-         ]
-         [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+      [ ifelse desire = escort_thief_outside [
+          set intention escort_thief
+        ]
+         ; hier moet ifelse bij voor intention escort_thief --> als hij thief caught is true en niet bij buitendeur en desire escort_thief_outside, set to escort_thief.
+          ; if intention = escort outside en bij buitendoor: zet thief_caught op false en set intention op move_around, om een nieuwe dief te zoeken. --> M: ik denk beter de desires veranderen op deze manier
+
+        [ ifelse intention = chase_thief [
+             set intention observe_environment
+          ]
+          [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
+            let thief_x item 0 thief_coord
+            let thief_y item 1 thief_coord
+            ifelse distancexy thief_x thief_y < 1 [
+              ;print "INTENTION TO CATCH"
+              set intention catch_thief
+            ]
+            [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+          ]
         ]
       ]
     ]
@@ -885,6 +922,11 @@ to catch-thief [c]
   ]
   ask cops [
     set seen_thieves [] ; this is to make sure that the cops are continueing observing the environment --> might want to change this if the way the thiefs are being caught changes
+    set caught_thief true
+  ]
+
+  ask cop c [
+    set caught_thief true
   ]
 
   ; delete thief from belief list --> done automatilly while updating
@@ -906,6 +948,68 @@ to escort-thief [c]
       ; go to next room
     ;]
   ;]
+
+  ask cop c [
+    print "ESCAPE ROUTES COPS"
+    print escape_routes_cops
+    let door_x 0
+    let door_y 0
+
+    print current_room
+    ifelse is-number? current_room [
+      ;print "in if"
+      set route_outside table:get escape_routes_cops current_room
+      ifelse route_outside = [] [
+      ; as then the thief's outside
+        set caught_thief false
+      ]
+
+      [ ifelse current_room != 2 [
+          set door_x item 0 item 0 route_outside
+          set door_y item 1 item 0 route_outside
+          print "X Y"
+          print door_x
+          print door_y
+        ]
+        [ ;print "in room 2"
+          print route_outside
+          set door_x item 0 route_outside
+          set door_y item 1 route_outside
+        ]
+
+        ifelse distancexy door_x door_x = 0 [
+          set route_outside remove-item 0 route_outside
+          forward 1
+          set-vision-radii-cops c
+        ]
+        [ facexy door_x door_y
+
+          ask patch-ahead 1 [
+            ifelse (not any? customers-on self and pcolor != black) or pcolor = blue [
+              ask cop c [
+                forward 1
+                set-vision-radii-cops c
+              ]
+            ]
+            [ ask cop c [
+                lt 180
+                forward 1
+                set-vision-radii-cops c
+                lt 90
+              ]
+            ]
+          ]
+        ]
+
+      ]
+    ]
+    [ forward 1 ]
+
+
+  ]
+
+
+
 end
 
     ;check voor jouw kamer wat de weg naar buiten is.
@@ -1070,9 +1174,19 @@ to setup-patches
   ]
 
   ; doors outside
+  let k 0
   ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor or pycor = min-pycor)] [
+
     set pcolor red
     table:put room_dict list pxcor pycor (list 2 0); in this version these two doors belong to the hall way and outside (0)
+    if k = 0 [
+      set coord_2_1 list pxcor pycor
+    ]
+    if k = 1 [
+      set coord_2_2 list pxcor pycor
+    ]
+    set k k + 1
+
   ]
 
   ; doors in environment - right side
@@ -1081,11 +1195,14 @@ to setup-patches
     set pcolor blue
     ; assign door patches to rooms
     if i = 0 [
-      table:put room_dict list pxcor pycor (list 5 2)]
+      table:put room_dict list pxcor pycor (list 5 2)] ; this is the door from room 5 to room 2
+      set coord_5 list pxcor pycor
     if i = 1 [
-      table:put room_dict list pxcor pycor (list 4 2)]
+      table:put room_dict list pxcor pycor (list 4 2)] ; this is the door from room 4 to room 2
+      set coord_4 list pxcor pycor
     if i = 2 [
-      table:put room_dict list pxcor pycor (list 3 2)]
+      table:put room_dict list pxcor pycor (list 3 2)] ; this is the door from room 3 to room 2
+      set coord_3 list pxcor pycor
     set i i + 1
   ]
 
@@ -1095,13 +1212,45 @@ to setup-patches
     ; assign door patches to rooms
     let j 0
     if j = 0 [
-      table:put room_dict list pxcor pycor (list 7 2)]
+      table:put room_dict list pxcor pycor (list 7 2)] ; this is the door from room 7 to room 2
+      set coord_7 list pxcor pycor
     if j = 1 [
-      table:put room_dict list pxcor pycor (list 6 2)]
+      table:put room_dict list pxcor pycor (list 6 2)] ; this is the door from room 6 to room 2
+      set coord_6 list pxcor pycor
     if j = 2 [
-      table:put room_dict list pxcor pycor (list 1 2)]
+      table:put room_dict list pxcor pycor (list 1 2)] ; this is the door from room 1 to room 2
+      set coord_1 list pxcor pycor
     set j j + 1
   ]
+
+  ; make escape route dictionary
+  let l 1
+  while [l < 8] [
+    if l = 1 [
+      table:put escape_dict 1 list coord_1 coord_2_2
+    ]
+    if l = 2 [
+      table:put escape_dict 2 coord_2_2 ; for now I just chose an exit
+    ]
+    if l = 3 [
+      table:put escape_dict 3 list coord_3 coord_2_2
+    ]
+    if l = 4 [
+      table:put escape_dict 4 list coord_4 coord_2_2
+    ]
+    if l = 5 [
+      table:put escape_dict 5 list coord_5 coord_2_1
+    ]
+    if l = 6 [
+      table:put escape_dict 6 list coord_6 coord_2_1
+    ]
+    if l = 7 [
+      table:put escape_dict 7 list coord_7 coord_2_1
+    ]
+    set l l + 1
+  ]
+
+  print escape_dict
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -1157,7 +1306,7 @@ num_customers
 num_customers
 0
 300
-227
+0
 1
 1
 NIL
