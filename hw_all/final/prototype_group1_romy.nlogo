@@ -5,7 +5,7 @@
 ; Suzanne Tolmeijer (10680403, suzanne.tolmeijer@gmail.com)
 
 ; TO DO
-; Update desire cops --> soms kennen ze een, cop maar hebben ze geen recente locatie, dan moet desire zoeken en niet vangen zijn
+; Update desire cops --> soms kennen ze een thief, maar hebben ze geen recente locatie, dan moet desire zoeken en niet vangen zijn
 ; Beliefs about agents (cops and thieves both) --> tellertje inbouwen dat je na bijv. 5 ticks de locatie vergeet als deze niet is geupdate
 ; Save doors to rooms --> fix properly
 ; Thieves: get item, walk to item, escape
@@ -16,7 +16,10 @@
 ; update seen thieves so that it can work with thieves that move
 ; sometimes new position thiefs gives error --> pos to -1
 ; When a thief is arrested, he disappears. This results in an error because the thief does not exist anymore. -> need to solve ;)
-; use speed and strength in the rest of the code
+; use strength in the rest of the code
+; check ticks and comments previous assignments
+; remove vision radius when thief dies
+; a thief went through a wall?
 
 ; DONE
 ; Setup floor
@@ -32,12 +35,12 @@
 ; BDI framework
 ; customers should move a bit --> for example random sample moves 1 forward in a random direction per tick
 ; make the monitors working when changing the number of customers (now they only work if the total number of customers is 150, and 2 cops are set first, then 2 thieves)
-; include speed and strength for cops and thieves
+; include strength for cops and thieves
 
 ; CHANGED
 ; A thief does not drop an item when it sees a cop, it will still flight (desire and intention of drop item is removed)
 ; Added intention thieves: move_to_item
-; Cops knows the speed & strength of the thief (for calling other cops). But there is no reason for a thieve to know the strength or speed of a cop, he will always flee.
+; Cops knows the strength of the thief (for calling other cops). But there is no reason for a thieve to know the strength of a cop, he will always flee.
 ; Removed the desire talk to colleagues of the cops, because the intention follows from the desire to catch a thief.
 ; Removed the intention move to cop, because they will use a walkytalky to talk to each other.
 ; Incoming messages are owned by cops.
@@ -81,7 +84,7 @@ customers-own [ move_around ]
 
 ; move_around: every customer will have the intention to move around
 
-cops-own [desire intention view vision_radius strength speed
+cops-own [desire intention view vision_radius strength
   move_around observe_environment inform_colleague receive_message
   chase_thief catch_thief escort_thief look_for_thief
   belief_seeing_thief belief_rooms_doors seen_thieves
@@ -92,7 +95,6 @@ cops-own [desire intention view vision_radius strength speed
 ; view: how many patches forward
 ; vision_radius: all patches he can see
 ; strength
-; speed
 ; move_around
 ; observe_environment
 ; inform_colleague
@@ -112,7 +114,7 @@ cops-own [desire intention view vision_radius strength speed
 ; thief_caught
 ; escort_thief_outside
 
-thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention strength speed items steal flight
+thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention strength items steal flight
   move_around observe_environment move_to_item steal_item escape view vision_radius seen_cops
   current_room seen_doors]
 
@@ -122,7 +124,6 @@ thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention
 ; desire
 ; intention:
 ; strength
-; speed
 ; items
 ; steal
 ; flight
@@ -247,15 +248,27 @@ to place-cop-manually
       ; belief --> TO DO should be the same as room_dict!
       set belief_rooms_doors table:make
       table:put belief_rooms_doors (table:get room_dict list floor(xcor) floor(ycor)) 0
+
+      ;ask patches with [pcolor = blue or pcolor = red] [
+        ; get coordinate of patch --> voor nu x_door en y_door
+        ; ask rooms belonging to patch
+        ;let rooms table:get room_dict (list x_door y_door)
+        ; save in belief_rooms_doors
+        ;table:put belief_rooms_doors room
+
+        ;let room table:get room_dict (list patch xcor ycor)
+        ;table:put belief_rooms_doors room lput table:get belief_rooms_doors room (list pxcor pycor)
+      ;]
+
+      ; --> 2 opties: via patches of via dict. Via patches lastig met nesting, via dict lastig want hoe krijg je het eruit zonder key?
+
       set route_outside [[1 2][2][3 2][4 2][5 2][6 2][7 2]]
       set-vision-radii-cops who
       setup-beliefs-cops who
       setup-desires-cops who
       set thief_caught false
       set number_cops number_cops + 1
-      set speed 1 + random (max-speed-cops)
       set strength 1 + random (max-strength-cops)
-      print speed
       ; the first to cops made can be followed with the monitors
       if number_cops = 1 [
         set cop1 self
@@ -288,7 +301,6 @@ to place-thief-manually
       setup-beliefs-thieves who
       setup-desires-thieves who
       set number_thieves number_thieves + 1
-      set speed 1 + random (max-speed-thieves)
       set strength 1 + random (max-strength-thieves)
       ; the first to thieves made can be followed with the monitors
       if number_thieves = 1 [
@@ -373,7 +385,6 @@ to set-vision-radii-thieves [t]
   ]
 end
 
-
 ; --- Setup ticks ---
 to setup-ticks
   ; In this method you may start the tick counter.
@@ -454,9 +465,9 @@ to update-beliefs
  ask thieves [
    set belief_seeing_cop seen_cops
    set belief_seeing_cop sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_cop
-   ;later: also adding speed and strength of the cop
+   ;later: also adding strength of the cop
 
-   ;if seeing cop: store cop with speed, strength and location (for number of ticks)
+   ;if seeing cop: store cop with strength and location (for number of ticks)
 
    ;note in which room you are
    let new_room table:get room_dict list floor(xcor) floor(ycor)
@@ -616,9 +627,6 @@ to update-intentions-cops
 
 end
 
-
-
-
 ; --- Execute actions ---
 to execute-actions-thieves
   ask thieves [
@@ -715,7 +723,7 @@ to move-around [i]
       if [breed] of turtle i = cops [
         ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
           lt 180
-          forward speed
+          forward 1
           lt random 90
           set-vision-radii-cops i
         ]
@@ -723,7 +731,7 @@ to move-around [i]
     ]
     [ ifelse not any? customers-on self and [breed] of turtle i = cops [
         ask cop i [
-          forward speed
+          forward 1
           set-vision-radii-cops i
         ]
     ]
@@ -746,7 +754,7 @@ to move-around-thief [i]
       if [breed] of turtle i = thieves [
         ask thief i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
           lt 180
-          forward speed
+          forward 1
           lt random 90
           set-vision-radii-thieves i
         ]
@@ -754,7 +762,7 @@ to move-around-thief [i]
     ]
     [ ifelse not any? customers-on self and [breed] of turtle i = thieves [
         ask thief i [
-          forward speed
+          forward 1
           set-vision-radii-thieves i
         ]
     ]
@@ -785,7 +793,7 @@ to observe-environment-cops [c]
          if distancexy x_cor y_cor < 5 [
            ask cop c [
               if (member? (list thief_x thief_y) seen_thieves = false) [ ; check whether not in belief base already
-                set seen_thieves lput(list thief_x thief_y) seen_thieves ; add coordinates of thief to belief base
+                set seen_thieves lput(list floor(thief_x) floor(thief_y)) seen_thieves ; add coordinates of thief to belief base, with floor for better visual
               ]
             ] ; this list is sorted later on
          ]
@@ -818,7 +826,7 @@ to observe-environment-thieves [t]
        ]
        if pcolor = blue[
          ask thief t[
-           set seen_doors lput (list x_cor y_cor) seen_doors
+           set seen_doors lput (list floor(x_cor) floor(y_cor)) seen_doors ;changed this to/with floor for better visual
          ]
        ]
      ]
@@ -850,13 +858,13 @@ to chase-thief [c]
   ask patch-ahead 1 [
     ifelse not any? customers-on self [
       ask cop c [
-        forward speed
+        forward 1
         set-vision-radii-cops c
       ]
     ]
     [ ask cop c [
         lt 90
-        forward speed
+        forward 1
         set-vision-radii-cops c
       ]
     ]
@@ -867,13 +875,14 @@ to catch-thief [c]
   ask thieves [
     if distancexy xcor ycor < 5 [
       die
+
     ]
   ]
   ask cops [
     set seen_thieves [] ; this is to make sure that the cops are continueing observing the environment --> might want to change this if the way the thiefs are being caught changes
   ]
 
-  ; delete thief from belief list --> done automatilly while updating
+  ; delete thief from belief list --> done automatilly while updating?
 
 end
 
@@ -921,7 +930,7 @@ to move-to-item [t]
    let item_y item 1 first_item
 
    facexy item_x item_y ; face in this direction --> still need to make sure you don't walk through customers
-   forward speed
+   forward 1
    set-vision-radii-thieves t
 
    ;if xcor != item_x and ycor != item_y [
@@ -955,7 +964,7 @@ to escape-now [t]  ;This function is not yet finished!
         if [breed] of turtle t = thieves [
           ask thief t [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoids going through a wall
             lt 180
-            forward speed
+            forward 1
             lt random 90
             set-vision-radii-thieves t
           ]
@@ -963,7 +972,7 @@ to escape-now [t]  ;This function is not yet finished!
       ]
       [ ifelse not any? customers-on self and [breed] of turtle t = thieves [
           ask thief t [
-            forward speed
+            forward 1
             set-vision-radii-thieves t
           ]
       ]
@@ -1228,25 +1237,10 @@ Setup thieves
 1
 
 SLIDER
-4
-215
-176
-248
-max-speed-thieves
-max-speed-thieves
-1
 3
-2
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-180
-216
-352
-249
+213
+175
+246
 max-strength-thieves
 max-strength-thieves
 1
@@ -1258,10 +1252,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-357
-216
-529
-249
+180
+213
+352
+246
 radius-thieves
 radius-thieves
 0
@@ -1283,25 +1277,10 @@ Setup cops
 1
 
 SLIDER
-6
-270
-178
-303
-max-speed-cops
-max-speed-cops
-1
-3
 2
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-182
-272
-354
-305
+265
+174
+298
 max-strength-cops
 max-strength-cops
 1
@@ -1313,10 +1292,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-363
-272
-535
-305
+183
+265
+355
+298
 radius-cops
 radius-cops
 0
@@ -1388,10 +1367,10 @@ Intention of cop 1
 11
 
 MONITOR
-8
-359
-209
-404
+2
+481
+203
+526
 Beliefs about seeing thief of cop 2
 [belief_seeing_thief] of cop2
 17
@@ -1399,10 +1378,10 @@ Beliefs about seeing thief of cop 2
 11
 
 MONITOR
-212
-358
-390
-403
+206
+480
+384
+525
 Desire of cop 2
 [desire] of cop2
 17
@@ -1410,10 +1389,10 @@ Desire of cop 2
 11
 
 MONITOR
-394
-358
-568
-403
+388
+480
+562
+525
 Intention of cop 2
 [intention] of cop2
 17
@@ -1421,10 +1400,10 @@ Intention of cop 2
 11
 
 MONITOR
-8
-418
-209
-463
+1318
+25
+1519
+70
 Beliefs about seeing cop of thief 1
 [belief_seeing_cop] of thief1
 17
@@ -1432,10 +1411,10 @@ Beliefs about seeing cop of thief 1
 11
 
 MONITOR
-212
-418
-433
-463
+1522
+25
+1743
+70
 Beliefs about seeing an item of thief 1
 [belief_items] of thief1
 17
@@ -1443,10 +1422,10 @@ Beliefs about seeing an item of thief 1
 11
 
 MONITOR
-110
-468
-272
-513
+1420
+75
+1582
+120
 Desire of thief 1
 [desire] of thief1
 17
@@ -1454,10 +1433,10 @@ Desire of thief 1
 11
 
 MONITOR
-275
-468
-444
-513
+1585
+75
+1754
+120
 Intention of thief 1
 [intention] of thief1
 17
@@ -1465,10 +1444,10 @@ Intention of thief 1
 11
 
 MONITOR
-4
-517
-205
-562
+1314
+124
+1515
+169
 Beliefs about seeing cop of thief 2
 [belief_seeing_cop] of thief2
 17
@@ -1476,10 +1455,10 @@ Beliefs about seeing cop of thief 2
 11
 
 MONITOR
-211
-517
-432
-562
+1521
+124
+1742
+169
 Beliefs about seeing an item of thief 2
 [belief_items] of thief2
 17
@@ -1487,10 +1466,10 @@ Beliefs about seeing an item of thief 2
 11
 
 MONITOR
-109
-565
-268
-610
+1419
+172
+1578
+217
 Desire of thief 2
 [desire] of thief2
 17
@@ -1498,15 +1477,81 @@ Desire of thief 2
 11
 
 MONITOR
-272
-566
-390
-611
+1582
+173
+1700
+218
 Intention of thief 2
 [intention] of thief2
 17
 1
 11
+
+MONITOR
+8
+365
+171
+418
+Seen thieves of cop 1
+[seen_thieves] of cop1
+17
+1
+13
+
+MONITOR
+184
+366
+356
+419
+sent messages of cop 1
+[sent_messages] of cop1
+17
+1
+13
+
+MONITOR
+369
+367
+505
+420
+Messages of cop 1
+[messages] of cop1
+17
+1
+13
+
+MONITOR
+4
+533
+159
+586
+Seen thieves of cop 2
+[seen_thieves] of cop2
+17
+1
+13
+
+MONITOR
+185
+535
+356
+588
+Sent messages of cop 2
+[sent_messages] of cop2
+17
+1
+13
+
+MONITOR
+383
+537
+518
+590
+Messages of cop 2
+[messages] of cop2
+17
+1
+13
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1851,7 +1896,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.3
+NetLogo 5.3.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
