@@ -19,7 +19,6 @@
 ; use strength in the rest of the code
 ; check ticks and comments previous assignments
 ; remove vision radius when thief dies
-; a thief went through a wall?
 
 ; DONE
 ; Setup floor
@@ -205,16 +204,22 @@ to go
   if ticks = 0 [
     setup-thieves
     setup-cops
+    update-beliefs
+    update-desires
+    update-intentions-cops
+    update-intentions-thieves
   ]
-  update-beliefs
-  update-desires
-  update-intentions-cops
-  update-intentions-thieves
   execute-actions-cops
   execute-actions-thieves
   ask customers [
     execute-actions-customers who
   ]
+
+  update-beliefs
+  update-desires
+  update-intentions-cops
+  update-intentions-thieves
+
   tick
 end
 
@@ -1896,7 +1901,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 5.3.1
+NetLogo 5.3
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
