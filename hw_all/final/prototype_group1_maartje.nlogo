@@ -218,16 +218,25 @@ to go
   if ticks = 0 [
     setup-thieves
     setup-cops
+    update-beliefs
+    update-desires
+    update-intentions-cops
+    update-intentions-thieves
   ]
+
+  ; execute actions
+  execute-actions-cops
+  execute-actions-thieves
+  ask customers [
+    execute-actions-customers who
+  ]
+
+  ; update BDI
   update-beliefs
   update-desires
   update-intentions-cops
   update-intentions-thieves
-  execute-actions-cops
-  execute-actions-thieves
-  ask customers [
-    ;execute-actions-customers who
-  ]
+
   tick
 end
 
@@ -848,8 +857,8 @@ to observe-environment-cops [c]
    foreach vision_radius [
      let x_cor item 0 ?
      let y_cor item 1 ?
-     ;ask patches with [pxcor = x_cor and pycor = y_cor and any? other turtles-here] [
-     ask patches with [distancexy x_cor y_cor < 5 and any? other turtles-here] [
+     ; if the patch in or around your vision radius patch contains a turtle
+     ask patches with [distancexy x_cor y_cor < 1 and any? other turtles-here] [
        ask turtles with [breed = thieves] [
          let thief_x xcor
          let thief_y ycor
