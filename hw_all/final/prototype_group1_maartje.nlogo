@@ -496,6 +496,12 @@ to update-beliefs
    if new_room = 0 [
      set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
    ]
+   if new_room = 0 [
+     set new_room table:get room_dict list floor(xcor) ceiling(ycor)
+   ]
+   if new_room = 0 [
+     set new_room table:get room_dict list ceiling(xcor) floor(ycor)
+   ]
 
    if current_room != new_room[
      set current_room new_room
@@ -561,14 +567,28 @@ to update-beliefs
    set belief_seeing_thief sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_thief
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
 
-   ;note in which room you are
-   let new_room table:get room_dict list floor(xcor) floor(ycor)
-   if new_room = 0 [
-     set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
+
+
+   ; now you're outisde, so obviously no room
+   ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+     set current_room 0
    ]
 
-   if current_room != new_room[
-     set current_room new_room
+   [ ;note in which room you are
+     let new_room table:get room_dict list floor(xcor) floor(ycor)
+     if new_room = 0 [
+       set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
+     ]
+     if new_room = 0 [
+       set new_room table:get room_dict list floor(xcor) ceiling(ycor)
+     ]
+     if new_room = 0 [
+       set new_room table:get room_dict list ceiling(xcor) floor(ycor)
+     ]
+
+     if current_room != new_room [
+       set current_room new_room
+     ]
    ]
 
  ]
@@ -934,42 +954,29 @@ to catch-thief [c]
 end
 
 to escort-thief [c]
-;  ask cops[
-    ; here the cop figures out which way to go to escort the thief outside to the police van
-
-    ; find the best route from your room
- ;   let way_out item (current_room -1) route_outside
-
-    ; if you are in a room with a door leading outside, go to it
-    ;ifelse length way_out = 1[
-    ;   table:get belief_room_doors current_room
-       ;go to door
-    ;][ ; else, go to the next room in your way_out
-      ; go to next room
-    ;]
-  ;]
-
   ask cop c [
     print "ESCAPE ROUTES COPS"
     print escape_routes_cops
+
+
     let door_x 0
     let door_y 0
 
-    print current_room
+
+
     ifelse is-number? current_room [
       ;print "in if"
       set route_outside table:get escape_routes_cops current_room
       ifelse route_outside = [] [
       ; as then the thief's outside
+        print "DONE"
         set caught_thief false
       ]
 
       [ ifelse current_room != 2 [
           set door_x item 0 item 0 route_outside
           set door_y item 1 item 0 route_outside
-          print "X Y"
-          print door_x
-          print door_y
+
         ]
         [ ;print "in room 2"
           print route_outside
@@ -977,10 +984,14 @@ to escort-thief [c]
           set door_y item 1 route_outside
         ]
 
-        ifelse distancexy door_x door_x = 0 [
+        ifelse distancexy door_x door_x < 0.5 [
           set route_outside remove-item 0 route_outside
           forward 1
-          set-vision-radii-cops c
+          ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+            print "DONE"
+            set caught_thief false
+          ]
+          [ set-vision-radii-cops c ]
         ]
         [ facexy door_x door_y
 
@@ -988,14 +999,23 @@ to escort-thief [c]
             ifelse (not any? customers-on self and pcolor != black) or pcolor = blue [
               ask cop c [
                 forward 1
-                set-vision-radii-cops c
+                ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+                  print "DONE"
+                  set caught_thief false
+                ]
+                [ set-vision-radii-cops c ]
               ]
             ]
             [ ask cop c [
                 lt 180
                 forward 1
-                set-vision-radii-cops c
-                lt 90
+                lt 15
+                ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+                  print "DONE"
+                  set caught_thief false
+                ]
+                [ set-vision-radii-cops c ]
+
               ]
             ]
           ]
@@ -1003,7 +1023,12 @@ to escort-thief [c]
 
       ]
     ]
-    [ forward 1 ]
+    [ forward 1
+      if (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+        print "DONE"
+        set caught_thief false ]]
+
+
 
 
   ]
@@ -1173,55 +1198,65 @@ to setup-patches
     set pcolor black
   ]
 
-  ; doors outside
+  ; door outside up
   let k 0
-  ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor or pycor = min-pycor)] [
-
+  ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = max-pycor)] [ ; or pycor = min-pycor)] [
     set pcolor red
     table:put room_dict list pxcor pycor (list 2 0); in this version these two doors belong to the hall way and outside (0)
-    if k = 0 [
-      set coord_2_1 list pxcor pycor
-    ]
-    if k = 1 [
-      set coord_2_2 list pxcor pycor
-    ]
-    set k k + 1
-
+    set coord_2_1 list pxcor pycor
   ]
 
-  ; doors in environment - right side
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and (pycor = (max-pycor - min-pycor) / 2 or pycor = (max-pycor - min-pycor) / 2 + 10 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
-    let i 0
+  ; door outside down
+  ask patches with [pxcor =  (max-pxcor - min-pxcor) / 2 and (pycor = min-pycor)] [
+    set pcolor red
+    table:put room_dict list pxcor pycor (list 2 0); in this version these two doors belong to the hall way and outside (0)
+    set coord_2_2 list pxcor pycor
+  ]
+
+  ; door inside - right (room 4 -> 2)
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and (pycor = (max-pycor - min-pycor) / 2)] [
     set pcolor blue
-    ; assign door patches to rooms
-    if i = 0 [
-      table:put room_dict list pxcor pycor (list 5 2)] ; this is the door from room 5 to room 2
-      set coord_5 list pxcor pycor
-    if i = 1 [
-      table:put room_dict list pxcor pycor (list 4 2)] ; this is the door from room 4 to room 2
-      set coord_4 list pxcor pycor
-    if i = 2 [
-      table:put room_dict list pxcor pycor (list 3 2)] ; this is the door from room 3 to room 2
-      set coord_3 list pxcor pycor
-    set i i + 1
+    table:put room_dict list pxcor pycor (list 4 2) ; this is the door from room 4 to room 2
+    set coord_4 list pxcor pycor
   ]
 
-  ; doors in environment - left side
-  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and (pycor = (max-pycor - min-pycor) / 2 + 3 or pycor = (max-pycor - min-pycor) / 2 + 14 or pycor = (max-pycor - min-pycor) / 2 - 10) ] [
+  ; door inside - right (room 5 -> 2)
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and pycor = (max-pycor - min-pycor) / 2 + 10] [
     set pcolor blue
-    ; assign door patches to rooms
-    let j 0
-    if j = 0 [
-      table:put room_dict list pxcor pycor (list 7 2)] ; this is the door from room 7 to room 2
-      set coord_7 list pxcor pycor
-    if j = 1 [
-      table:put room_dict list pxcor pycor (list 6 2)] ; this is the door from room 6 to room 2
-      set coord_6 list pxcor pycor
-    if j = 2 [
-      table:put room_dict list pxcor pycor (list 1 2)] ; this is the door from room 1 to room 2
-      set coord_1 list pxcor pycor
-    set j j + 1
+    table:put room_dict list pxcor pycor (list 5 2) ; this is the door from room 5 to room 2
+    set coord_5 list pxcor pycor
   ]
+
+  ; door inside - right (room 3 -> 2)
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 + 3 and pycor = (max-pycor - min-pycor) / 2 - 10 ] [
+    set pcolor blue
+    table:put room_dict list pxcor pycor (list 3 2)
+    set coord_3 list pxcor pycor  ; this is the door from room 3 to room 2
+  ]
+
+  ; door inside - left (room 6 -> 2)
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and pycor = (max-pycor - min-pycor) / 2 + 3] [
+    set pcolor blue
+    table:put room_dict list pxcor pycor (list 6 2)
+    set coord_6 list pxcor pycor  ; this is the door from room 6 to room 2
+  ]
+
+  ; door inside - left (room 7 -> 2)
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and pycor = (max-pycor - min-pycor) / 2 + 14] [
+    set pcolor blue
+    table:put room_dict list pxcor pycor (list 7 2) ; this is the door from room 7 to room 2
+    set coord_7 list pxcor pycor
+  ]
+
+  ; door inside - left (room 1 -> 2)
+  ask patches with [pxcor = (max-pxcor - min-pxcor) / 2 - 3 and pycor = (max-pycor - min-pycor) / 2 - 10] [
+    set pcolor blue
+    table:put room_dict list pxcor pycor (list 1 2) ; this is the door from room 1 to room 2
+    set coord_1 list pxcor pycor
+  ]
+
+
+
 
   ; make escape route dictionary
   let l 1
