@@ -65,7 +65,8 @@ globals [time
          coord_4
          coord_5
          coord_6
-         coord_7]
+         coord_7
+         thieves_active ]
 
 ; time: the time elapsed during the simulation
 ; room_dict: a dictionary with all the rooms, and which patches belong to it (including doors)
@@ -154,6 +155,7 @@ to setup
   clear-all
   set time 0
   set escape_dict table:make ; global variable as it's global information that is made when setting up the rooms and doors
+  set thieves_active 0
 
   setup-patches
   setup-rooms
@@ -236,6 +238,11 @@ to go
   update-desires
   update-intentions-cops
   update-intentions-thieves
+
+  ; this requires that you put thieves on the grid, before running
+  if thieves_active = 0 [
+    stop
+  ]
 
   tick
 end
@@ -331,6 +338,7 @@ to place-thief-manually
 
       set escaped false
       set escape_routes_thieves escape_dict
+      set thieves_active thieves_active + 1
 
       ; the first to thieves made can be followed with the monitors
       if number_thieves = 1 [
@@ -972,6 +980,7 @@ to escort-thief [c]
       ; as then the thief's outside
         print "DONE"
         set caught_thief false
+        set thieves_active thieves_active - 1
       ]
 
       [ ifelse current_room != 2 [
@@ -991,6 +1000,7 @@ to escort-thief [c]
           ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
             print "DONE"
             set caught_thief false
+            set thieves_active thieves_active - 1
           ]
           [ set-vision-radii-cops c ]
         ]
@@ -1003,6 +1013,7 @@ to escort-thief [c]
                 ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
                   print "DONE"
                   set caught_thief false
+                  set thieves_active thieves_active - 1
                 ]
                 [ set-vision-radii-cops c ]
               ]
@@ -1014,6 +1025,7 @@ to escort-thief [c]
                 ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
                   print "DONE"
                   set caught_thief false
+                  set thieves_active thieves_active - 1
                 ]
                 [ set-vision-radii-cops c ]
 
@@ -1027,7 +1039,8 @@ to escort-thief [c]
     [ forward 1
       if (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
         print "DONE"
-        set caught_thief false ]]
+        set caught_thief false
+        set thieves_active thieves_active - 1]]
 
 
 
@@ -1102,6 +1115,7 @@ to escape-now [t]  ;This function is not yet finished!
       ; as then the thief's outside
         print "DONE"
         set escaped true
+        set thieves_active thieves_active - 1
       ]
 
       [ ifelse current_room != 2 [
@@ -1121,6 +1135,7 @@ to escape-now [t]  ;This function is not yet finished!
           ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
             print "DONE"
             set escaped true
+            set thieves_active thieves_active - 1
           ]
           [ set-vision-radii-thieves t ]
         ]
@@ -1133,6 +1148,7 @@ to escape-now [t]  ;This function is not yet finished!
                 ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
                   print "DONE"
                   set escaped true
+                  set thieves_active thieves_active - 1
                 ]
                 [ set-vision-radii-thieves t ]
               ]
@@ -1157,7 +1173,8 @@ to escape-now [t]  ;This function is not yet finished!
     [ forward 1
       if (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
         print "DONE"
-        set escaped true ]]
+        set escaped true
+        set thieves_active thieves_active - 1]]
   ]
 end
 
