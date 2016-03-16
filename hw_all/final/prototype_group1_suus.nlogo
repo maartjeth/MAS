@@ -12,7 +12,6 @@
 ; Thieves: if you know the location of a cop, avoid him
 ; communcation cops
 ; update belief items thieves, in case it is already stolen
-; belief_seen_cops --> standaard beginnen met alle cops kennen alleen geen locatie.
 ; update seen thieves so that it can work with thieves that move
 ; sometimes new position thiefs gives error --> pos to -1
 ; When a thief is arrested, he disappears. This results in an error because the thief does not exist anymore. -> need to solve ;)
@@ -484,7 +483,6 @@ to update-desires
     ][
       set desire steal
     ]
-    print desire
   ]
 end
 
@@ -514,8 +512,6 @@ to update-beliefs
 
    if current_room != new_room[
      set current_room new_room
-     print "NEW CURRENT ROOM"
-     print current_room
    ]
 
    ; update belief about room and doors  = not working completely right now!
@@ -568,7 +564,6 @@ to update-beliefs
   set t t + 1
  ]
 
- ;print "updating beliefs"
 
  ;
  ask cops [
@@ -616,8 +611,7 @@ to update-intentions-thieves
 
   ask thieves [
 
-   ; print "INTENTION"
-   ; print intention
+
 
     ifelse intention = move_around [
       set intention observe_environment
@@ -680,7 +674,6 @@ to update-intentions-cops
             let thief_x item 0 thief_coord
             let thief_y item 1 thief_coord
             ifelse distancexy thief_x thief_y < 1 [
-              ;print "INTENTION TO CATCH"
               set intention catch_thief
             ]
             [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
@@ -688,9 +681,6 @@ to update-intentions-cops
         ]
       ]
     ]
-
-  ;print "intention cop"
-  ;print intention
   ]
 
 
@@ -780,6 +770,7 @@ to send-message [c]
       if who != c [
         if (member? ? seen_thieves = false) [
           set seen_thieves lput(?) seen_thieves
+          print seen_thieves
         ]
       ]
     ]
@@ -858,11 +849,18 @@ to observe-environment-cops [c]
      let x_cor item 0 ?
      let y_cor item 1 ?
      ; if the patch in or around your vision radius patch contains a turtle
-     ask patches with [distancexy x_cor y_cor < 1 and any? other turtles-here] [
+     ask patches with [distancexy x_cor y_cor < 1 and any? other thieves-here] [
+       ;ask cop c[
+       ;  if (member? (list pxcor pycor) seen_thieves = false) [
+       ;    set seen_thieves lput(list pxcor pycor) seen_thieves
+       ;  ]
+       ;]
+     ;]
+
        ask turtles with [breed = thieves] [
          let thief_x xcor
          let thief_y ycor
-         if distancexy x_cor y_cor < 5 [
+         if distancexy x_cor y_cor < 1 [
            ask cop c [
               if (member? (list thief_x thief_y) seen_thieves = false) [ ; check whether not in belief base already
                 set seen_thieves lput(list thief_x thief_y) seen_thieves ; add coordinates of thief to belief base
@@ -946,6 +944,16 @@ end
 to catch-thief [c]
   ask thieves [
     if distancexy xcor ycor < 5 [
+      foreach vision_radius [
+        let clean_x item 0 ?
+        let clean_y item 1 ?
+        ask patches with [pxcor = clean_x and pycor = clean_y] [
+          if (pcolor != blue and pcolor != red and pcolor != orange) [
+            set pcolor white
+          ]
+        ]
+      ]
+      set vision_radius [] ; empty this thing here
       die
     ]
   ]
@@ -961,6 +969,7 @@ to catch-thief [c]
   ; delete thief from belief list --> done automatilly while updating
 
 end
+
 
 to escort-thief [c]
   ask cop c [
