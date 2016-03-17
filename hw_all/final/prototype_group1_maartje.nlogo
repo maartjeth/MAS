@@ -96,7 +96,7 @@ cops-own [desire intention view vision_radius strength speed
   chase_thief catch_thief escort_thief look_for_thief
   belief_seeing_thief belief_rooms_doors seen_thieves
   messages sent_messages current_room seen_doors thief_caught escort_thief_outside
-  escape_routes_cops caught_thief route_outside]
+  escape_routes_cops caught_thief route_outside incoming_messages]
 
 ; desire:
 ; intention:
@@ -211,6 +211,7 @@ to setup-cops
     set escort_thief "escort_thief"
 
     set caught_thief false
+    set incoming_messages []
   ]
 end
 
@@ -300,7 +301,7 @@ to place-cop-manually
       set number_cops number_cops + 1
       set speed 1 ;+ random (max-speed-cops)
       set strength 1 + random (max-strength-cops)
-      print speed
+      ; print speed
       ; the first to cops made can be followed with the monitors
       if number_cops = 1 [
         set cop1 self
@@ -569,9 +570,24 @@ to update-beliefs
  ;
  ask cops [
    set belief_seeing_thief seen_thieves
+   if incoming_messages != [] [
+     print "Got an imcoming message"
+     print belief_seeing_thief
+     foreach incoming_messages [
+       if (member? ? belief_seeing_thief = false) [
+         print "put it in belief base"
+         set belief_seeing_thief lput ? belief_seeing_thief
+       ]
+     ]
+     print belief_seeing_thief
+     set incoming_messages [] ; empty
+   ]
+
    set belief_seeing_thief sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_thief
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
-
+   ;print "belief seeing thief"
+   ;print belief_seeing_thief
+   ;print "..."
 
 
    ; now you're outisde, so obviously no room
@@ -597,8 +613,6 @@ to update-beliefs
    ]
 
  ]
-
-   ; update which door belongs to which room
 
 end
 
@@ -775,6 +789,9 @@ to execute-actions-customers [cust]
 end
 
 to send-message [c]
+  ;print "MESSAGES"
+  ;print messages
+  ;print "..."
   foreach messages [
     ask cops [
       if who != c [
@@ -852,6 +869,7 @@ end
 
 to observe-environment-cops [c]
 
+  ; print "hello i'm observing the environment"
   ; check whether you see at thief
    set seen_thieves [] ; reset and make new one based on what you see now
    foreach vision_radius [
@@ -873,9 +891,14 @@ to observe-environment-cops [c]
      ]
    ]
 
+  ; print "SEEN THIEVES"
+  ; print seen_thieves
+  ; print "..."
+
    foreach seen_thieves [
      if (member? ? sent_messages = false) [
-       set messages seen_thieves
+       ;set messages seen_thieves
+       set incoming_messages seen_thieves
      ]
    ]
 
@@ -951,7 +974,7 @@ to catch-thief [c]
   ]
   ask cops [
     set seen_thieves [] ; this is to make sure that the cops are continueing observing the environment --> might want to change this if the way the thiefs are being caught changes
-    set caught_thief true
+
   ]
 
   ask cop c [
@@ -964,8 +987,8 @@ end
 
 to escort-thief [c]
   ask cop c [
-    print "ESCAPE ROUTES COPS"
-    print escape_routes_cops
+    ;print "ESCAPE ROUTES COPS"
+    ;print escape_routes_cops
 
 
     let door_x 0
@@ -1103,8 +1126,8 @@ end
 
 to escape-now [t]  ;This function is not yet finished!
   ask thief t [
-    print "ESCAPE ROUTES COPS"
-    print escape_routes_thieves
+    ; print "ESCAPE ROUTES COPS"
+    ;print escape_routes_thieves
 
     let door_x 0
     let door_y 0
@@ -1124,7 +1147,7 @@ to escape-now [t]  ;This function is not yet finished!
 
         ]
         [ ;print "in room 2"
-          print route_outside
+          ; print route_outside
           set door_x item 0 route_outside
           set door_y item 1 route_outside
         ]
