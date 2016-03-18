@@ -269,7 +269,7 @@ to place-cop-manually
       set color black
       set shape "person"
       set heading 0 ; delete, this is just for debugging
-      set view 90
+      set view 120
       set seen_thieves []
       set messages []
       set sent_messages []
@@ -541,11 +541,9 @@ to update-beliefs
       let check_item_y item 1 check_items
       ask patch check_item_x check_item_y [
         if pcolor = white [
-          print "checking belief items"
           ask turtle t [
             if breed = thieves [
               if belief_items != [] [
-                print "reset belief_items"
                 set belief_items remove-item 0 belief_items
               ]
             ]
@@ -662,10 +660,7 @@ to update-intentions-cops
       [ ifelse desire = escort_thief_outside [
           set intention escort_thief
         ]
-         ; hier moet ifelse bij voor intention escort_thief --> als hij thief caught is true en niet bij buitendeur en desire escort_thief_outside, set to escort_thief.
-          ; if intention = escort outside en bij buitendoor: zet thief_caught op false en set intention op move_around, om een nieuwe dief te zoeken. --> M: ik denk beter de desires veranderen op deze manier
-
-        [ ifelse intention = chase_thief [
+         [ ifelse intention = chase_thief [
              set intention observe_environment
           ]
           [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
