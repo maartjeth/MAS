@@ -65,7 +65,8 @@ globals [time
          coord_4
          coord_5
          coord_6
-         coord_7]
+         coord_7
+         thieves_active ]
 
 ; time: the time elapsed during the simulation
 ; room_dict: a dictionary with all the rooms, and which patches belong to it (including doors)
@@ -95,7 +96,7 @@ cops-own [desire intention view vision_radius strength speed
   chase_thief catch_thief escort_thief look_for_thief
   belief_seeing_thief belief_rooms_doors seen_thieves
   messages sent_messages current_room seen_doors thief_caught escort_thief_outside
-  escape_routes_cops caught_thief route_outside]
+  escape_routes_cops caught_thief route_outside incoming_messages]
 
 ; desire:
 ; intention:
@@ -124,7 +125,7 @@ cops-own [desire intention view vision_radius strength speed
 
 thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention strength speed items steal flight
   move_around observe_environment move_to_item steal_item escape view vision_radius seen_cops
-  current_room seen_doors]
+  current_room seen_doors escape_routes_thieves escaped route_outside]
 
 ; belief_seeing_cop
 ; belief_rooms_doors
@@ -154,6 +155,7 @@ to setup
   clear-all
   set time 0
   set escape_dict table:make ; global variable as it's global information that is made when setting up the rooms and doors
+  set thieves_active 0
 
   setup-patches
   setup-rooms
@@ -209,6 +211,7 @@ to setup-cops
     set escort_thief "escort_thief"
 
     set caught_thief false
+    set incoming_messages []
   ]
 end
 
@@ -236,6 +239,11 @@ to go
   update-desires
   update-intentions-cops
   update-intentions-thieves
+
+  ; this requires that you put thieves on the grid, before running
+  if thieves_active = 0 [
+    stop
+  ]
 
   tick
 end
@@ -281,7 +289,6 @@ to place-cop-manually
         ;let room table:get room_dict (list patch xcor ycor)
         ;table:put belief_rooms_doors room lput table:get belief_rooms_doors room (list pxcor pycor)
       ;]
-
       ; --> 2 opties: via patches of via dict. Via patches lastig met nesting, via dict lastig want hoe krijg je het eruit zonder key?
 
       ;set route_outside [[1 2][2][3 2][4 2][5 2][6 2][7 2]]
@@ -294,7 +301,6 @@ to place-cop-manually
       set number_cops number_cops + 1
       set speed 1 ;+ random (max-speed-cops)
       set strength 1 + random (max-strength-cops)
-      print speed
       ; the first to cops made can be followed with the monitors
       if number_cops = 1 [
         set cop1 self
@@ -329,6 +335,11 @@ to place-thief-manually
       set number_thieves number_thieves + 1
       set speed 1 ;+ random (max-speed-thieves)
       set strength 1 + random (max-strength-thieves)
+
+      set escaped false
+      set escape_routes_thieves escape_dict
+      set thieves_active thieves_active + 1
+
       ; the first to thieves made can be followed with the monitors
       if number_thieves = 1 [
         set thief1 self
@@ -481,10 +492,9 @@ to update-desires
     ;if the thief has an item it will want to flee with it, else it will want to steal something
     ifelse items = true [
       set desire flight
-    ][
-      set desire steal
     ]
-    print desire
+    [ set desire steal ]
+
   ]
 end
 
@@ -499,43 +509,29 @@ to update-beliefs
    ;later: also adding speed and strength of the cop
 
    ;if seeing cop: store cop with speed, strength and location (for number of ticks)
-
-   ;note in which room you are
-   let new_room table:get room_dict list floor(xcor) floor(ycor)
-   if new_room = 0 [
-     set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
-   ]
-   if new_room = 0 [
-     set new_room table:get room_dict list floor(xcor) ceiling(ycor)
-   ]
-   if new_room = 0 [
-     set new_room table:get room_dict list ceiling(xcor) floor(ycor)
+ ; now you're outisde, so obviously no room
+   ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+     set current_room 0
    ]
 
-   if current_room != new_room[
-     set current_room new_room
-     print "NEW CURRENT ROOM"
-     print current_room
-   ]
-
-   ; update belief about room and doors  = not working completely right now!
-   ifelse table:has-key? belief_rooms_doors current_room[
-     if seen_doors != [] [
-       ; check if the door already exists or not
-       table:put belief_rooms_doors current_room seen_doors
-       set seen_doors []
+   [ ;note in which room you are
+     let new_room table:get room_dict list floor(xcor) floor(ycor)
+     if new_room = 0 [
+       set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
      ]
-   ][; assumption: a thief can only see 1 door at a time
-     ; if you don't have any knowledge of doors yet, you can override the start value 0
-     ifelse table:get belief_rooms_doors current_room = (list current_room 0)[  ;NOTE THIS GIVES AN ERROR SOMETIMES --> when walking out of the door or through a wall and he shouldn't be able to do that
-       table:put belief_rooms_doors current_room seen_doors
-     ][
-       ; else you need to keep your old knowledge and add the new to it
-       let old_value table:get belief_rooms_doors current_room
-       table:put belief_rooms_doors current_room list old_value seen_doors
+     if new_room = 0 [
+       set new_room table:get room_dict list floor(xcor) ceiling(ycor)
      ]
-     set seen_doors []
+     if new_room = 0 [
+       set new_room table:get room_dict list ceiling(xcor) floor(ycor)
+     ]
+
+     if current_room != new_room [
+       set current_room new_room
+     ]
    ]
+
+
 
    ; delete item that the thief has already stolen from belief_items and sort the list
    ; (just in case there are more than 1 items in sight, the thief will catch the closest item)
@@ -545,22 +541,15 @@ to update-beliefs
       let check_item_y item 1 check_items
       ask patch check_item_x check_item_y [
         if pcolor = white [
+          print "checking belief items"
           ask turtle t [
-            ;print breed
             if breed = thieves [
-              print "test"
+              if belief_items != [] [
+                print "reset belief_items"
+                set belief_items remove-item 0 belief_items
+              ]
             ]
           ]
-
-
-          ;if breed thief t = thieves[
-          ;  ask thief t [
-          ;    if belief_items != [] [
-          ;      print "reset belief_items"
-          ;      set belief_items remove-item 0 belief_items
-          ;    ]
-          ;  ]
-          ;]
         ]
       ]
     ]
@@ -568,15 +557,24 @@ to update-beliefs
   set t t + 1
  ]
 
- ;print "updating beliefs"
-
  ;
  ask cops [
    set belief_seeing_thief seen_thieves
+   if incoming_messages != [] [
+     print "Got an imcoming message"
+     print belief_seeing_thief
+     foreach incoming_messages [
+       if (member? ? belief_seeing_thief = false) [
+         print "put it in belief base"
+         set belief_seeing_thief lput ? belief_seeing_thief
+       ]
+     ]
+     print belief_seeing_thief
+     set incoming_messages [] ; empty
+   ]
+
    set belief_seeing_thief sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_thief
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
-
-
 
    ; now you're outisde, so obviously no room
    ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
@@ -602,8 +600,6 @@ to update-beliefs
 
  ]
 
-   ; update which door belongs to which room
-
 end
 
 ; --- Update intentions ---
@@ -616,37 +612,33 @@ to update-intentions-thieves
 
   ask thieves [
 
-   ; print "INTENTION"
-   ; print intention
+   ifelse intention = move_around [
+     set intention observe_environment
+   ]
+   [ set intention move_around ]
 
-    ifelse intention = move_around [
-      set intention observe_environment
-    ]
-    [ set intention move_around ]
-
-    ifelse intention = [] [
-      set intention move_around
-    ]
-    [
-      ifelse desire = steal and belief_items != [] [ ; then items = false --> no need to check for belief_items = [] only because of netlogos stupid ifelse construction....
-        ; do your stuff to steal an item: move to item OR observe environment
-        ; no matter what, if you're at an item --> just steal it
-        let item_to_steal item 0 belief_items
-        ifelse distancexy item 0 item_to_steal item 1 item_to_steal < 0.5 [
-          set intention steal_item
-        ]
-        ; else: observe environment or move to item
-        [
-          ifelse intention = move_to_item [
-            set intention observe_environment
-          ]
-          [ set intention move_to_item ]
-        ]
+   ifelse intention = [] [
+     set intention move_around
+   ]
+   [
+     ifelse desire = steal and belief_items != [] [ ; then items = false --> no need to check for belief_items = [] only because of netlogos stupid ifelse construction....
+       ; do your stuff to steal an item: move to item OR observe environment
+       ; no matter what, if you're at an item --> just steal it
+       let item_to_steal item 0 belief_items
+       ifelse distancexy item 0 item_to_steal item 1 item_to_steal < 0.5 [
+         set intention steal_item
+       ]
+       ; else: observe environment or move to item
+       [ifelse intention = move_to_item [
+         set intention observe_environment
+       ]
+       [ set intention move_to_item ]
       ]
+    ]
 
       [ if desire != steal [; ELSE: do your stuff to flight
-           set intention escape
-        ]
+        set intention escape
+      ]
       ]
     ]
   ]
@@ -680,7 +672,6 @@ to update-intentions-cops
             let thief_x item 0 thief_coord
             let thief_y item 1 thief_coord
             ifelse distancexy thief_x thief_y < 1 [
-              ;print "INTENTION TO CATCH"
               set intention catch_thief
             ]
             [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
@@ -688,9 +679,6 @@ to update-intentions-cops
         ]
       ]
     ]
-
-  ;print "intention cop"
-  ;print intention
   ]
 
 
@@ -718,8 +706,12 @@ to execute-actions-thieves
       steal-item who
     ]
 
-    if intention = escape [
+    if intention = escape and escaped = false [
       escape-now who
+    ]
+
+    if intention = escape and escaped = true [
+      die
     ]
   ]
 
@@ -873,9 +865,10 @@ to observe-environment-cops [c]
      ]
    ]
 
-   foreach seen_thieves [
+  foreach seen_thieves [
      if (member? ? sent_messages = false) [
-       set messages seen_thieves
+       ;set messages seen_thieves
+       set incoming_messages seen_thieves
      ]
    ]
 
@@ -891,7 +884,6 @@ to observe-environment-thieves [t]
      ; check whether you see an item or a door
      ask patches with [pxcor = x_cor and pycor = y_cor] [
        if pcolor = orange[
-         print "orange patch"
          ask thief t[
            set belief_items lput(list x_cor y_cor) belief_items
          ]
@@ -944,14 +936,29 @@ to chase-thief [c]
 end
 
 to catch-thief [c]
-  ask thieves [
-    if distancexy xcor ycor < 5 [
+  ask cop c[
+    let cop_x xcor
+    let cop_y ycor
+    ask thieves[
+      if distancexy cop_x cop_y < 2 [
+      foreach vision_radius [
+        let clean_x item 0 ?
+        let clean_y item 1 ?
+        ask patches with [pxcor = clean_x and pycor = clean_y] [
+          if (pcolor != blue and pcolor != red and pcolor != orange) [
+            set pcolor white
+          ]
+        ]
+      ]
+      set vision_radius [] ; empty this thing here
       die
+      ]
     ]
   ]
+
   ask cops [
     set seen_thieves [] ; this is to make sure that the cops are continueing observing the environment --> might want to change this if the way the thiefs are being caught changes
-    set caught_thief true
+
   ]
 
   ask cop c [
@@ -964,22 +971,17 @@ end
 
 to escort-thief [c]
   ask cop c [
-    print "ESCAPE ROUTES COPS"
-    print escape_routes_cops
-
 
     let door_x 0
     let door_y 0
 
-
-
     ifelse is-number? current_room [
-      ;print "in if"
       set route_outside table:get escape_routes_cops current_room
       ifelse route_outside = [] [
       ; as then the thief's outside
         print "DONE"
         set caught_thief false
+        set thieves_active thieves_active - 1
       ]
 
       [ ifelse current_room != 2 [
@@ -987,8 +989,7 @@ to escort-thief [c]
           set door_y item 1 item 0 route_outside
 
         ]
-        [ ;print "in room 2"
-          print route_outside
+        [
           set door_x item 0 route_outside
           set door_y item 1 route_outside
         ]
@@ -999,6 +1000,7 @@ to escort-thief [c]
           ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
             print "DONE"
             set caught_thief false
+            set thieves_active thieves_active - 1
           ]
           [ set-vision-radii-cops c ]
         ]
@@ -1011,6 +1013,7 @@ to escort-thief [c]
                 ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
                   print "DONE"
                   set caught_thief false
+                  set thieves_active thieves_active - 1
                 ]
                 [ set-vision-radii-cops c ]
               ]
@@ -1022,6 +1025,7 @@ to escort-thief [c]
                 ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
                   print "DONE"
                   set caught_thief false
+                  set thieves_active thieves_active - 1
                 ]
                 [ set-vision-radii-cops c ]
 
@@ -1035,7 +1039,8 @@ to escort-thief [c]
     [ forward 1
       if (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
         print "DONE"
-        set caught_thief false ]]
+        set caught_thief false
+        set thieves_active thieves_active - 1]]
 
 
 
@@ -1066,7 +1071,6 @@ to new-pos [my_pos follow_pos] ; function gets the position to be followed and t
 end
 
 to move-to-item [t]
- print "move to item"
  ask thief t[
    let first_item item 0 belief_items ; assume this list is sorted and you move to the closest item
    let item_x item 0 first_item
@@ -1087,7 +1091,6 @@ end
 
 to steal-item [t]
   ; if you found an item, steal it
-  print "steal item"
   if pcolor != white [
     set pcolor white
     ask thief t[
@@ -1097,41 +1100,74 @@ to steal-item [t]
 end
 
 to escape-now [t]  ;This function is not yet finished!
-  print "escape now"
-  ; to check if turtle reaches a wall
-  ifelse intention = escape ;no door in sight (now just rubbish for debugging)
+  ask thief t [
+    let door_x 0
+    let door_y 0
 
-  [
-    ask patch-ahead 1 [
-      ifelse pcolor = black [
-        if [breed] of turtle t = thieves [
-          ask thief t [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoids going through a wall
-            lt 180
-            forward speed
-            lt random 90
-            set-vision-radii-thieves t
+    ifelse is-number? current_room [
+      set route_outside table:get escape_routes_thieves current_room
+      ifelse route_outside = [] [
+      ; as then the thief's outside
+        print "DONE"
+        set escaped true
+        set thieves_active thieves_active - 1
+      ]
+
+      [ ifelse current_room != 2 [
+          set door_x item 0 item 0 route_outside
+          set door_y item 1 item 0 route_outside
+
+        ]
+        [ set door_x item 0 route_outside
+          set door_y item 1 route_outside
+        ]
+
+        ifelse distancexy door_x door_x < 0.5 [
+          set route_outside remove-item 0 route_outside
+          forward 1
+          ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+            print "DONE"
+            set escaped true
+            set thieves_active thieves_active - 1
+          ]
+          [ set-vision-radii-thieves t ]
+        ]
+        [ facexy door_x door_y
+
+          ask patch-ahead 1 [
+            ifelse (not any? customers-on self and pcolor != black) or pcolor = blue [
+              ask thief t [
+                forward 1
+                ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+                  print "DONE"
+                  set escaped true
+                  set thieves_active thieves_active - 1
+                ]
+                [ set-vision-radii-thieves t ]
+              ]
+            ]
+            [ ask thief t [
+                lt 180
+                forward 1
+                lt 90
+                ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+                  print "DONE"
+                  set escaped true
+                ]
+                [ set-vision-radii-thieves t ]
+
+              ]
+            ]
           ]
         ]
-      ]
-      [ ifelse not any? customers-on self and [breed] of turtle t = thieves [
-          ask thief t [
-            forward speed
-            set-vision-radii-thieves t
-          ]
-      ]
-      [ if [breed] of turtle t = thieves [
-          ask thief t [
-            lt 90
-            set-vision-radii-thieves t
-          ]
-         ]
-      ]
-      ]
 
-   ]
-  ]
-  [ ;if a door is in sight, go to this door
-
+      ]
+    ]
+    [ forward 1
+      if (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
+        print "DONE"
+        set escaped true
+        set thieves_active thieves_active - 1]]
   ]
 end
 
