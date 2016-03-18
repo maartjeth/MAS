@@ -96,7 +96,7 @@ cops-own [desire intention view vision_radius strength speed
   chase_thief catch_thief escort_thief look_for_thief
   belief_seeing_thief belief_rooms_doors seen_thieves
   messages sent_messages current_room seen_doors thief_caught escort_thief_outside
-  escape_routes_cops caught_thief route_outside incoming_messages]
+  escape_routes_cops caught_thief route_outside incoming_messages outgoing_messages]
 
 ; desire:
 ; intention:
@@ -212,6 +212,7 @@ to setup-cops
 
     set caught_thief false
     set incoming_messages []
+    set outgoing_messages []
   ]
 end
 
@@ -570,8 +571,11 @@ to update-beliefs
  ;
  ask cops [
    set belief_seeing_thief seen_thieves
+   print "incoming message before"
+   print incoming_messages
    if incoming_messages != [] [
-     print "Got an imcoming message"
+     print "Got an imcoming message and I'm cop "
+     print who
      print belief_seeing_thief
      foreach incoming_messages [
        if (member? ? belief_seeing_thief = false) [
@@ -580,7 +584,7 @@ to update-beliefs
        ]
      ]
      print belief_seeing_thief
-     set incoming_messages [] ; empty
+     ;set incoming_messages [] ; empty
    ]
 
    set belief_seeing_thief sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_thief
@@ -674,7 +678,7 @@ to update-intentions-cops
       [ set intention observe_environment ]
     ]
     ; has seen thief, thus desire = catch thief
-    [ ifelse messages != [] [
+    [ ifelse outgoing_messages != [] [
         set intention inform_colleague
       ]
       [ ifelse desire = escort_thief_outside [
@@ -743,6 +747,7 @@ end
 to execute-actions-cops
   ask cops [
     if intention = inform_colleague [
+      print "INTENTION TO INFORM COLLEGUE"
       send-message who
     ]
 
@@ -789,25 +794,30 @@ to execute-actions-customers [cust]
 end
 
 to send-message [c]
-  ;print "MESSAGES"
-  ;print messages
-  ;print "..."
-  foreach messages [
+  print "MESSAGES"
+  print outgoing_messages
+  print "..."
+  foreach outgoing_messages [
+
     ask cops [
       if who != c [
+        set incoming_messages []
         if (member? ? seen_thieves = false) [
-          set seen_thieves lput(?) seen_thieves
+          set incoming_messages lput(?) incoming_messages
         ]
       ]
     ]
   ]
-  set messages []
+
+
+  print "emptying messages"
+  set outgoing_messages []
 end
 
 
 to move-around [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 1 [ ; to make sure that the cop does not reach the wall
+  ask patch-ahead 2 [ ; to make sure that the cop does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = cops [
         ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
@@ -838,7 +848,7 @@ end
 
 to move-around-thief [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 1 [  ;1.5 to make sure that the thief does not reach the wall
+  ask patch-ahead 2 [  ;1.5 to make sure that the thief does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = thieves [
         ask thief i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
@@ -896,11 +906,13 @@ to observe-environment-cops [c]
   ; print "..."
 
    foreach seen_thieves [
-     if (member? ? sent_messages = false) [
+     if (member? ? outgoing_messages = false) [
        ;set messages seen_thieves
-       set incoming_messages seen_thieves
+       set outgoing_messages lput(?) outgoing_messages
      ]
    ]
+   print "OUTGOING MESSAGES"
+   print outgoing_messages
 
 
 
