@@ -15,7 +15,7 @@
 ; update seen thieves so that it can work with thieves that move
 ; sometimes new position thiefs gives error --> pos to -1
 ; When a thief is arrested, he disappears. This results in an error because the thief does not exist anymore. -> need to solve ;)
-; use speed and strength in the rest of the code
+; use strength in the rest of the code
 
 ; DONE
 ; Setup floor
@@ -31,12 +31,12 @@
 ; BDI framework
 ; customers should move a bit --> for example random sample moves 1 forward in a random direction per tick
 ; make the monitors working when changing the number of customers (now they only work if the total number of customers is 150, and 2 cops are set first, then 2 thieves)
-; include speed and strength for cops and thieves
+; include strength for cops and thieves
 
 ; CHANGED
 ; A thief does not drop an item when it sees a cop, it will still flight (desire and intention of drop item is removed)
 ; Added intention thieves: move_to_item
-; Cops knows the speed & strength of the thief (for calling other cops). But there is no reason for a thieve to know the strength or speed of a cop, he will always flee.
+; Cops knows the strength of the thief (for calling other cops). But there is no reason for a thieve to know the strength of a cop, he will always flee.
 ; Removed the desire talk to colleagues of the cops, because the intention follows from the desire to catch a thief.
 ; Removed the intention move to cop, because they will use a walkytalky to talk to each other.
 ; Incoming messages are owned by cops.
@@ -89,7 +89,7 @@ customers-own [ move_around ]
 
 ; move_around: every customer will have the intention to move around
 
-cops-own [desire intention view vision_radius strength speed
+cops-own [desire intention view vision_radius strength
   move_around observe_environment inform_colleague receive_message
   chase_thief catch_thief escort_thief look_for_thief
   belief_seeing_thief belief_rooms_doors seen_thieves
@@ -101,7 +101,6 @@ cops-own [desire intention view vision_radius strength speed
 ; view: how many patches forward
 ; vision_radius: all patches he can see
 ; strength
-; speed
 ; move_around
 ; observe_environment
 ; inform_colleague
@@ -121,7 +120,7 @@ cops-own [desire intention view vision_radius strength speed
 ; thief_caught
 ; escort_thief_outside
 
-thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention strength speed items steal flight
+thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention strength items steal flight
   move_around observe_environment move_to_item steal_item escape view vision_radius seen_cops
   current_room seen_doors]
 
@@ -131,7 +130,6 @@ thieves-own [ belief_seeing_cop belief_rooms_doors belief_items desire intention
 ; desire
 ; intention:
 ; strength
-; speed
 ; items
 ; steal
 ; flight
@@ -291,9 +289,7 @@ to place-cop-manually
       setup-desires-cops who
       set thief_caught false
       set number_cops number_cops + 1
-      set speed 1 ;+ random (max-speed-cops)
       set strength 1 + random (max-strength-cops)
-      print speed
       ; the first to cops made can be followed with the monitors
       if number_cops = 1 [
         set cop1 self
@@ -326,7 +322,6 @@ to place-thief-manually
       setup-beliefs-thieves who
       setup-desires-thieves who
       set number_thieves number_thieves + 1
-      set speed 1 ;+ random (max-speed-thieves)
       set strength 1 + random (max-strength-thieves)
       ; the first to thieves made can be followed with the monitors
       if number_thieves = 1 [
@@ -349,7 +344,7 @@ to set-vision-radii-cops [c]
        let clean_x item 0 ?
        let clean_y item 1 ?
        ask patches with [pxcor = clean_x and pycor = clean_y] [
-         if (pcolor != blue and pcolor != red and pcolor != orange) [
+          if (pcolor != blue and pcolor != red and pcolor != orange) [
            set pcolor white
          ]
        ]
@@ -494,9 +489,9 @@ to update-beliefs
  ask thieves [
    set belief_seeing_cop seen_cops
    set belief_seeing_cop sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_cop
-   ;later: also adding speed and strength of the cop
+   ;later: also adding strength of the cop
 
-   ;if seeing cop: store cop with speed, strength and location (for number of ticks)
+   ;if seeing cop: store cop with strength and location (for number of ticks)
 
    ;note in which room you are
    let new_room table:get room_dict list floor(xcor) floor(ycor)
@@ -781,12 +776,12 @@ end
 
 to move-around [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 1 [ ; to make sure that the cop does not reach the wall
+  ask patch-ahead 1.5 [ ; to make sure that the cop does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = cops [
         ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
           lt 180
-          forward speed
+          forward 1
           lt random 90
           set-vision-radii-cops i
         ]
@@ -794,7 +789,7 @@ to move-around [i]
     ]
     [ ifelse not any? customers-on self and [breed] of turtle i = cops [
         ask cop i [
-          forward speed
+          forward 1
           set-vision-radii-cops i
         ]
     ]
@@ -812,12 +807,12 @@ end
 
 to move-around-thief [i]
   ; to check if turtle reaches a wall
-  ask patch-ahead 1 [  ;1.5 to make sure that the thief does not reach the wall
+  ask patch-ahead 1.5 [  ;1.5 to make sure that the thief does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = thieves [
         ask thief i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
           lt 180
-          forward speed
+          forward 1
           lt random 90
           set-vision-radii-thieves i
         ]
@@ -825,7 +820,7 @@ to move-around-thief [i]
     ]
     [ ifelse not any? customers-on self and [breed] of turtle i = thieves [
         ask thief i [
-          forward speed
+          forward 1
           set-vision-radii-thieves i
         ]
     ]
@@ -928,13 +923,13 @@ to chase-thief [c]
   ask patch-ahead 1 [
     ifelse not any? customers-on self [
       ask cop c [
-        forward speed
+        forward 1
         set-vision-radii-cops c
       ]
     ]
     [ ask cop c [
         lt 90
-        forward speed
+        forward 1
         set-vision-radii-cops c
       ]
     ]
@@ -1082,7 +1077,7 @@ to move-to-item [t]
    let item_y item 1 first_item
 
    facexy item_x item_y ; face in this direction --> still need to make sure you don't walk through customers
-   forward speed
+   forward 1
    set-vision-radii-thieves t
 
    ;if xcor != item_x and ycor != item_y [
@@ -1116,7 +1111,7 @@ to escape-now [t]  ;This function is not yet finished!
         if [breed] of turtle t = thieves [
           ask thief t [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoids going through a wall
             lt 180
-            forward speed
+            forward 1
             lt random 90
             set-vision-radii-thieves t
           ]
@@ -1124,7 +1119,7 @@ to escape-now [t]  ;This function is not yet finished!
       ]
       [ ifelse not any? customers-on self and [breed] of turtle t = thieves [
           ask thief t [
-            forward speed
+            forward 1
             set-vision-radii-thieves t
           ]
       ]
@@ -1359,7 +1354,7 @@ num_customers
 num_customers
 0
 300
-0
+100
 1
 1
 NIL
