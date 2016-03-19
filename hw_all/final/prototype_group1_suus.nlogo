@@ -537,21 +537,12 @@ to update-beliefs
       ask patch check_item_x check_item_y [
         if pcolor = white [
           ask turtle t [
-            ;print breed
             if breed = thieves [
-              print "test"
+              if belief_items != [] [
+                set belief_items remove-item 0 belief_items
+              ]
             ]
           ]
-
-
-          ;if breed thief t = thieves[
-          ;  ask thief t [
-          ;    if belief_items != [] [
-          ;      print "reset belief_items"
-          ;      set belief_items remove-item 0 belief_items
-          ;    ]
-          ;  ]
-          ;]
         ]
       ]
     ]
@@ -633,7 +624,7 @@ to update-intentions-thieves
         ]
       ]
 
-      [ if desire != steal [; ELSE: do your stuff to flight
+      [ if desire != steal [; ELSE: do your stuff to flee
            set intention escape
         ]
       ]
@@ -647,33 +638,41 @@ to update-intentions-cops
   ask cops [
 
     ifelse (desire = look_for_thief) [ ; hasn't seen thief
-      ifelse intention = observe_environment [
-        set intention move_around
+      ; your first intention is to move around
+      ifelse ticks = 0 [
+        set intention (list observe_environment)
+      ][
+        ifelse item 0 intention = observe_environment [
+        set intention (list move_around)
       ]
-      [ set intention observe_environment ]
+      [ set intention (list observe_environment) ]
+      ]
+
     ]
     ; has seen thief, thus desire = catch thief
-    [ ifelse messages != [] [
-        set intention inform_colleague
-      ]
-      [ ifelse desire = escort_thief_outside [
-          set intention escort_thief
+    [ ifelse desire = escort_thief_outside [
+          set intention (list escort_thief)
         ]
-         ; hier moet ifelse bij voor intention escort_thief --> als hij thief caught is true en niet bij buitendeur en desire escort_thief_outside, set to escort_thief.
-          ; if intention = escort outside en bij buitendoor: zet thief_caught op false en set intention op move_around, om een nieuwe dief te zoeken. --> M: ik denk beter de desires veranderen op deze manier
-
-        [ ifelse intention = chase_thief [
-             set intention observe_environment
+        [ ifelse item 0 intention = chase_thief [
+             set intention (list observe_environment)
           ]
           [ let thief_coord item 0 belief_seeing_thief ; now you just go after the first thief you've seen
             let thief_x item 0 thief_coord
             let thief_y item 1 thief_coord
             ifelse distancexy thief_x thief_y < 1 [
-              set intention catch_thief
+              set intention (list catch_thief)
             ]
-            [ set intention chase_thief ] ; now we don't look around anymore once seen a thief, but change this
+            [ set intention (list chase_thief) ] ; now we don't look around anymore once seen a thief, but change this
           ]
         ]
+    ]
+    ; if you saw a thief, you want to let your colleagues know
+    ifelse messages != [][
+      set intention lput inform_colleague intention
+    ][
+    ; if you did not see one, remove the inform_colleague intention from your intention list
+      if length intention = 2[
+        set intention remove-item 1 intention
       ]
     ]
   ]
@@ -713,28 +712,30 @@ end
 
 to execute-actions-cops
   ask cops [
-    if intention = inform_colleague [
-      send-message who
-    ]
-
-    if intention = move_around [
+    if item 0 intention = move_around [
       move-around who
     ]
 
-    if intention = observe_environment [
+    if item 0 intention = observe_environment [
       observe-environment-cops who
     ]
 
-    if intention = chase_thief [
+    if item 0 intention = chase_thief [
       chase-thief who
     ]
 
-    if intention = catch_thief [
+    if item 0 intention = catch_thief [
       catch-thief who
     ]
 
-    if intention = escort_thief [
+    if item 0 intention = escort_thief [
       escort-thief who
+    ]
+
+    if length intention = 2 [
+      if item 1 intention = inform_colleague[
+        send-message who
+      ]
     ]
   ]
 end
@@ -765,7 +766,7 @@ to send-message [c]
       if who != c [
         if (member? ? seen_thieves = false) [
           set seen_thieves lput(?) seen_thieves
-          print seen_thieves
+          ;print seen_thieves
         ]
       ]
     ]
@@ -884,7 +885,6 @@ to observe-environment-thieves [t]
      ; check whether you see an item or a door
      ask patches with [pxcor = x_cor and pycor = y_cor] [
        if pcolor = orange[
-         print "orange patch"
          ask thief t[
            set belief_items lput(list x_cor y_cor) belief_items
          ]
@@ -937,8 +937,11 @@ to chase-thief [c]
 end
 
 to catch-thief [c]
-  ask thieves [
-    if distancexy xcor ycor < 5 [
+  ask cop c[
+    let cop_x xcor
+    let cop_y ycor
+    ask thieves[
+      if distancexy cop_x cop_y < 3 [
       foreach vision_radius [
         let clean_x item 0 ?
         let clean_y item 1 ?
@@ -950,11 +953,13 @@ to catch-thief [c]
       ]
       set vision_radius [] ; empty this thing here
       die
+      ]
     ]
   ]
+
   ask cops [
     set seen_thieves [] ; this is to make sure that the cops are continueing observing the environment --> might want to change this if the way the thiefs are being caught changes
-    set caught_thief true
+    set caught_thief false ; for all cops, they have not caught the thief, and do not have to escort them, so they can continue searching
   ]
 
   ask cop c [
@@ -968,9 +973,6 @@ end
 
 to escort-thief [c]
   ask cop c [
-    print "ESCAPE ROUTES COPS"
-    print escape_routes_cops
-
 
     let door_x 0
     let door_y 0
@@ -978,7 +980,6 @@ to escort-thief [c]
 
 
     ifelse is-number? current_room [
-      ;print "in if"
       set route_outside table:get escape_routes_cops current_room
       ifelse route_outside = [] [
       ; as then the thief's outside
@@ -991,9 +992,7 @@ to escort-thief [c]
           set door_y item 1 item 0 route_outside
 
         ]
-        [ ;print "in room 2"
-          print route_outside
-          set door_x item 0 route_outside
+        [ set door_x item 0 route_outside
           set door_y item 1 route_outside
         ]
 
@@ -1070,7 +1069,6 @@ to new-pos [my_pos follow_pos] ; function gets the position to be followed and t
 end
 
 to move-to-item [t]
- print "move to item"
  ask thief t[
    let first_item item 0 belief_items ; assume this list is sorted and you move to the closest item
    let item_x item 0 first_item
@@ -1091,7 +1089,6 @@ end
 
 to steal-item [t]
   ; if you found an item, steal it
-  print "steal item"
   if pcolor != white [
     set pcolor white
     ask thief t[
@@ -1101,7 +1098,6 @@ to steal-item [t]
 end
 
 to escape-now [t]  ;This function is not yet finished!
-  print "escape now"
   ; to check if turtle reaches a wall
   ifelse intention = escape ;no door in sight (now just rubbish for debugging)
 
@@ -1298,7 +1294,6 @@ to setup-patches
     set l l + 1
   ]
 
-  print escape_dict
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -1354,7 +1349,7 @@ num_customers
 num_customers
 0
 300
-100
+50
 1
 1
 NIL
