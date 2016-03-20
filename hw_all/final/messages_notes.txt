@@ -1,0 +1,31 @@
+seen thieves
+belief thieves
+
+; see which thief you can chase best, if there is one to chase
+   foreach belief_thieves[
+     ; if the thief already has a status, check which one it is
+     ifelse length ? > 3[
+       if item 3 = "chasing"[
+         
+     ]
+   ]
+
+Update desires:
+look_for_thief
+  if belief []
+    set intention look_for_thief
+  if belief != [] and caught_thief = false and (iedereen status   unknown/prison) OR (catching or escorting and not you)
+    set intention look_for_thief
+
+catch_thief
+  if belief != [] and caught_thief = false (status catching and you) 
+    set intention catch_thief
+
+escort_thief_outside
+  if belief != [] and caught_thief = true
+    set intention escort_thief_outside
+
+
+
+
+
