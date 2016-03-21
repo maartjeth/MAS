@@ -1,5 +1,6 @@
 seen thieves
 belief thieves
+TODO: nog updaten dat locatie vergeten wordt 
 
 ; see which thief you can chase best, if there is one to chase
    foreach belief_thieves[
@@ -26,6 +27,10 @@ escort_thief_outside
     set intention escort_thief_outside
 
 
+[xcor ycor ID status agents]
 
+Optie: seen thieves heeft nog geen status, wordt toegevoegd bij beliefs (ook logisch), en vanuit beliefs worden messages gemaakt.
+In sent_messages per dief laatste status opslaan, om geen onnodige info te sturen (tenzij dief op dezelfde plek blijft?)
+Andere optie: in belief onthouden of de info ingeupdate of niet, binair die na 1 tick locatie leeg maakt en status op unknown. 
 
 

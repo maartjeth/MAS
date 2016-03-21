@@ -389,6 +389,16 @@ to update-beliefs
  ; You should update your agent's beliefs here.
  let t 0
  ask thieves [
+   ;SUUS: hier moet de status aan je belief worden toegevoegd
+
+   ; stap 1: voeg status toe op basis van seen_thieves
+   foreach seen_cops[
+     ; voeg status toe
+   ]
+
+   ; stap 2: check of je wel moet overschrijven of niet (hierarchy status)
+
+   ; twee regels hieronder moeten vervangen door foreach hierboven
    set belief_seeing_cop seen_cops
    set belief_seeing_cop sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_cop
    ;later: also adding strength of the cop
@@ -490,17 +500,9 @@ to update-desires
 
         set desire escort_thief_outside
       ][; if someone saw a thief at one point and you haven't caught one now, go check each thief in desires
+        ; to be able to break out of a for-each loop, it has to be in a seperate prodecure in netlogo
         foreach-thief who
       ]
-    ]
-
-    ifelse belief_thieves = [] and caught_thief = false [
-      set desire look_for_thief
-    ]
-    [ ifelse caught_thief = true [
-        set desire escort_thief_outside
-      ]
-      [ set desire catch_thief ]
     ]
   ]
 
@@ -599,11 +601,12 @@ to update-intentions-cops
         [ ifelse item 0 intention = chase_thief [
              set intention (list observe_environment)
           ]
-          [ ; SUUS: hier updaten welke dief je hebt gezien en wanneer je er iets mee gaat doen
+          [ ; SUUS: nu pakt hij altijd de dichtstbijzijnde in de lijst, maar misschien is die niet pakbaar, moet veranderd worden
 
             let thief_coord item 0 belief_thieves ; now you just go after the first thief you've seen
             let thief_x item 0 thief_coord
             let thief_y item 1 thief_coord
+
             ifelse distancexy thief_x thief_y < 1 [
               set intention (list catch_thief)
             ]
@@ -712,10 +715,11 @@ end
 
 to send-message [c]
 
-  ; SUUS: hier moet de message aangepast worden naar het nieuwe format, seen_thieves heeft invloed hierop
+  ; SUUS: hier is de message langer, dus opbouw moet anders
   foreach messages [
     ask cops [
       if who != c [
+        ; dit gaat niet meer, moet andere check zijn wanneer je info overneemt (hierarchy status)
         if (member? ? seen_thieves = false) [
           set seen_thieves lput(?) seen_thieves
           ;print seen_thieves
@@ -806,9 +810,9 @@ end
 
 to observe-environment-cops [c]
 
-  ; SUUS: seen_thieves bevat geen status nog? --> moet wel
+  ; SUUS: gedaan, message update gaat in update beliefs gebeuren
 
-  ; check whether you see at thief
+  ; check whether you see a thief
    set seen_thieves [] ; reset and make new one based on what you see now
    foreach vision_radius [
      let x_cor item 0 ?
@@ -830,8 +834,8 @@ to observe-environment-cops [c]
      ]
    ]
 
-   ; same as old version, but you set your message to it before you believe it yourself? but maybe better for ticks, send info asap
-   set messages seen_thieves
+   ; delete set messages here, put in update beliefs instead, when status is added
+   ; set messages seen_thieves
 end
 
 to observe-environment-thieves [t]
@@ -873,7 +877,7 @@ end
 
 to chase-thief [c]
 
-  ; SUUS: hier moet belief_thieves anders, je moet een bepaalde thief volgen. meegeven als parameter, waar?
+  ; SUUS: nu wordt eerste dief uit lijst gekozen, moet worden: eerste in lijst die status chasing heeft.
 
   let my_pos list floor(xcor) floor(ycor)
   let follow_pos_it item 0 belief_thieves
