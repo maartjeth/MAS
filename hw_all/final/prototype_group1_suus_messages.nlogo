@@ -389,16 +389,6 @@ to update-beliefs
  ; You should update your agent's beliefs here.
  let t 0
  ask thieves [
-   ;SUUS: hier moet de status aan je belief worden toegevoegd
-
-   ; stap 1: voeg status toe op basis van seen_thieves
-   foreach seen_cops[
-     ; voeg status toe
-   ]
-
-   ; stap 2: check of je wel moet overschrijven of niet (hierarchy status)
-
-   ; twee regels hieronder moeten vervangen door foreach hierboven
    set belief_seeing_cop seen_cops
    set belief_seeing_cop sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_cop
    ;later: also adding strength of the cop
@@ -448,8 +438,23 @@ to update-beliefs
  ;
  ask cops [
 
-   ; SUUS: gedaan
+   ;SUUS: hier moet de status aan je belief worden toegevoegd
 
+   ; stap 1: voeg status toe op basis van seen_thieves
+   let seen_thieves_status []
+
+   foreach seen_thieves[
+     ; add status chasing to the seen_thief: the cop beliefs it should be chased when it is spotted
+     let new_status lput "chasing" ?
+     set seen_thieves_status lput new_status seen_thieves_status
+   ]
+
+   ; stap 2: check of je wel moet overschrijven of niet (hierarchy status)
+   foreach seen_thieves_status[
+
+   ]
+
+   ; twee regels hieronder moeten vervangen door 2 stappen hierboven hierboven
    set belief_thieves seen_thieves
    set belief_thieves sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_thieves
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
@@ -499,7 +504,7 @@ to update-desires
       ifelse caught_thief = true[ ;if you caught a thief, you want to escort him outside
 
         set desire escort_thief_outside
-      ][; if someone saw a thief at one point and you haven't caught one now, go check each thief in desires
+      ][; if someone saw a thief at one point and you haven't caught one now, go check each thief in beliefs
         ; to be able to break out of a for-each loop, it has to be in a seperate prodecure in netlogo
         foreach-thief who
       ]
@@ -524,7 +529,7 @@ to foreach-thief [c] ; check for each thief what influence it has on your desire
          set desire catch_thief
          stop
        ]
-       ; hier iets voor andere optie look_for_thief? lijkt erop van niet?
+       ; hier iets voor andere optie look_for_thief? hoeft niet als stop werkt
      ]
    ]
    set desire look_for_thief
@@ -610,7 +615,7 @@ to update-intentions-cops
             ifelse distancexy thief_x thief_y < 1 [
               set intention (list catch_thief)
             ]
-            [ set intention (list chase_thief) ] ; now we don't look around anymore once seen a thief, but change this
+            [ set intention (list chase_thief) ] ; now we don't look around anymore once seen a thief, but change this --> klopt dit wel?
           ]
         ]
     ]
@@ -715,7 +720,7 @@ end
 
 to send-message [c]
 
-  ; SUUS: hier is de message langer, dus opbouw moet anders
+  ; SUUS: hier is de message langer, dus opbouw moet anders --> check met sent_messages, 1 laatste verzonden onthouden per dief
   foreach messages [
     ask cops [
       if who != c [
