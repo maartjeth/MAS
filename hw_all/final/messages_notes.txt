@@ -1,6 +1,6 @@
-seen thieves
-belief thieves
 TODO: nog updaten dat locatie vergeten wordt 
+Hoe weet je welke je kunt vergeten?
+Naamgeving checken van desires, of het wel klopt
 
 Update desires:
 look_for_thief
@@ -25,5 +25,7 @@ Statussen hierarchy: unknown, chasing, catching, escorting, prison
 Optie: seen thieves heeft nog geen status, wordt toegevoegd bij beliefs (ook logisch), en vanuit beliefs worden messages gemaakt.
 In sent_messages per dief laatste status opslaan, om geen onnodige info te sturen (tenzij dief op dezelfde plek blijft?)
 Andere optie: in belief onthouden of de info ingeupdate of niet, binair die na 1 tick locatie leeg maakt en status op unknown. --> is kut, beter gewoon in sent_message checken. 
+Verantwoording 'vergeetachtigheid' cops over locatie dieven: zo kunnen ze ontsnappen. 
+Status hierarchie --> opslaan als lijst voor index vergelijking?
 
 

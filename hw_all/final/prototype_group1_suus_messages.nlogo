@@ -449,9 +449,22 @@ to update-beliefs
      set seen_thieves_status lput new_status seen_thieves_status
    ]
 
+   ; TODO belief_thieves als dict gebruiken
    ; stap 2: check of je wel moet overschrijven of niet (hierarchy status)
    foreach seen_thieves_status[
+     let thief_ID item 2 ?
+     let thief_x item 0 ?
+     let thief_y item 1 ?
 
+     ifelse member? item 2 thief_ID belief_thieves[ ; if you already know this thief
+       let known_thief member? item 2 thief_ID belief_thieves
+       if item 3 known_thief != "catching" or item 3 known_thief != "escorting" or item 3 known_thief != "prison" [; if the status is not catching, escorting or prison, so its chasing or unknown
+         ; update x en y
+         ; update status to chasing
+       ]
+     ][ ;else you don't know the thief yet, so add it to your beliefs
+       set belief_thieves lput ? belief_thieves
+     ]
    ]
 
    ; twee regels hieronder moeten vervangen door 2 stappen hierboven hierboven
