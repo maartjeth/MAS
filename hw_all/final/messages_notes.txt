@@ -1,9 +1,10 @@
 [xcor ycor ID status agents]
 Statussen hierarchy: unknown, chasing, catching, escorting, prison
 
-Update beliefs (hierarchy):  
-
-
+TODO: 
+Locatie vergeten als geen statusupdate gekregen en status was chasing
+Naamgeving checken van desires, of het wel klopt
+	
 Update desires:
 look_for_thief
   if belief []
@@ -19,17 +20,6 @@ escort_thief_outside
   if belief != [] and caught_thief = true
     set intention escort_thief_outside
 
-TODO: nog updaten dat locatie vergeten wordt 
-Hoe weet je welke je kunt vergeten?
-Naamgeving checken van desires, of het wel klopt
-Overal waar nodig send message erin zetten
-Waar cop toevoegen aan message
-send-message: naar iedereen en niet alleen naar iedereen behalve jou
-
-Optie: seen thieves heeft nog geen status, wordt toegevoegd bij beliefs (ook logisch), en vanuit beliefs worden messages gemaakt.
-In sent_messages per dief laatste status opslaan, om geen onnodige info te sturen (tenzij dief op dezelfde plek blijft?)
-Andere optie: in belief onthouden of de info ingeupdate of niet, binair die na 1 tick locatie leeg maakt en status op unknown. --> is kut, beter gewoon in sent_message checken. 
 Verantwoording 'vergeetachtigheid' cops over locatie dieven: zo kunnen ze ontsnappen. 
-Status hierarchie --> opslaan als lijst voor index vergelijking?
 
-
+lijst met lijst met item			
