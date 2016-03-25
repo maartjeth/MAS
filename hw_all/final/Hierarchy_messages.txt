@@ -1,0 +1,26 @@
+Status ontvangen (in messages of zelf gezien, namelijk in seen_thieves):
+
+chasing --> overnemen als unknown
+catching --> overnemen als unknown or chasing
+escorting --> overnemen als unknown, catching or escorting
+prison --> altijd overnemen
+
+[x y ID status cops]
+
+dus 
+ifelse status ontvangen message prison:
+	overnemen
+
+ifelse status ontvangen is escorting
+	if huidige status != prison				
+		overnemen	
+		
+ifelse status ontvangen is catching 
+	if huidige status != prison and huidige status != escorting
+		overnemen	
+
+laatste else (dus status is chasing)
+	if huidige status != prison and != escorting and != catching
+		neem alles over behalve cop
+		voeg cop toe aan item 4 
+

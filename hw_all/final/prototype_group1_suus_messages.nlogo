@@ -444,20 +444,24 @@ to update-beliefs
    let seen_thieves_status []
 
    foreach seen_thieves[
-     ; add status chasing to the seen_thief: the cop beliefs it should be chased when it is spotted
-     let new_status lput "chasing" ?
-     set seen_thieves_status lput new_status seen_thieves_status
+     ifelse length ? < 4[ ; if it does not has a status yet, it is a thief that you saw, not that someone else saw, and you need to add a status to it
+       ; add status chasing to the seen_thief: the cop beliefs it should be chased when it is spotted
+       let new_status lput "chasing" ?
+       set seen_thieves_status lput new_status seen_thieves_status
+     ][; else this was send by another cop and already has a status, you can just add it
+       set seen_thieves_status lput ? seen_thieves_status
+     ]
    ]
 
-   ; TODO belief_thieves als dict gebruiken
    ; stap 2: check of je wel moet overschrijven of niet (hierarchy status)
    foreach seen_thieves_status[
-     let thief_ID item 2 ?
      let thief_x item 0 ?
      let thief_y item 1 ?
+     let thief_ID item 2 ?
 
      ifelse member? item 2 thief_ID belief_thieves[ ; if you already know this thief
-       let known_thief member? item 2 thief_ID belief_thieves
+       let known_thief member? item 2 thief_ID belief_thieves ; get the ID of this thief
+
        if item 3 known_thief != "catching" or item 3 known_thief != "escorting" or item 3 known_thief != "prison" [; if the status is not catching, escorting or prison, so its chasing or unknown
          ; update x en y
          ; update status to chasing

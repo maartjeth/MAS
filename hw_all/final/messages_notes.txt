@@ -1,6 +1,8 @@
-TODO: nog updaten dat locatie vergeten wordt 
-Hoe weet je welke je kunt vergeten?
-Naamgeving checken van desires, of het wel klopt
+[xcor ycor ID status agents]
+Statussen hierarchy: unknown, chasing, catching, escorting, prison
+
+Update beliefs (hierarchy):  
+
 
 Update desires:
 look_for_thief
@@ -17,10 +19,12 @@ escort_thief_outside
   if belief != [] and caught_thief = true
     set intention escort_thief_outside
 
-
-[xcor ycor ID status agents]
-
-Statussen hierarchy: unknown, chasing, catching, escorting, prison
+TODO: nog updaten dat locatie vergeten wordt 
+Hoe weet je welke je kunt vergeten?
+Naamgeving checken van desires, of het wel klopt
+Overal waar nodig send message erin zetten
+Waar cop toevoegen aan message
+send-message: naar iedereen en niet alleen naar iedereen behalve jou
 
 Optie: seen thieves heeft nog geen status, wordt toegevoegd bij beliefs (ook logisch), en vanuit beliefs worden messages gemaakt.
 In sent_messages per dief laatste status opslaan, om geen onnodige info te sturen (tenzij dief op dezelfde plek blijft?)
