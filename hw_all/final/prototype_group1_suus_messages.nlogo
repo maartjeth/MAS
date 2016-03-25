@@ -25,7 +25,9 @@ globals [time
          coord_5
          coord_6
          coord_7
-         thieves_active]
+         thieves_active
+         num_thieves_in_prison
+         num_stolen_items]
 
 ; time: the time elapsed during the simulation
 ; room_dict: a dictionary with all the rooms, and which patches belong to it (including doors)
@@ -111,6 +113,9 @@ to setup
   clear-all
   set time 0
   set escape_dict table:make ; global variable as it's global information that is made when setting up the rooms and doors
+  set thieves_active 0
+  set num_stolen_items 0
+  set num_thieves_in_prison 0
 
   setup-patches
   setup-rooms
@@ -194,6 +199,11 @@ to go
   update-intentions-cops
   update-intentions-thieves
 
+  ; this requires that you put thieves on the grid, before running
+  if thieves_active = 0 [
+    stop
+  ]
+
   tick
 end
 
@@ -225,7 +235,7 @@ to place-cop-manually
       set messages []
       set vision_radius []
       set seen_doors []
-
+      set route_outside []
       set escape_routes_cops escape_dict
 
       set-vision-radii-cops who
@@ -259,6 +269,7 @@ to place-thief-manually
       set seen_cops []
       set vision_radius []
       set seen_doors []
+      set route_outside []
       set-vision-radii-thieves who
       setup-beliefs-thieves who
       setup-desires-thieves who

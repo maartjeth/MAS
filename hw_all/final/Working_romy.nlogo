@@ -969,10 +969,10 @@ to escort-thief [c]   ;Romy: CHANGED
         set thieves_active thieves_active - 1
         set num_thieves_in_prison num_thieves_in_prison + 1
         set caught_thief false
-         lt 180
-         forward 1
-         ;lt random 90
-         set-vision-radii-cops c
+        lt 180
+        forward 1
+        ;lt random 90
+        set-vision-radii-cops c
       ]
       [
 
