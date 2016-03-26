@@ -425,9 +425,8 @@ to update-beliefs
  ask thieves [
    set belief_seeing_cop seen_cops
    set belief_seeing_cop sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_cop
-   ;later: also adding strength of the cop
 
-   ;if seeing cop: store cop with strength and location (for number of ticks)
+   ;if seeing cop: store cop with location (for number of ticks)
 
    ;note in which room you are
    if floor(ycor) != -1 [ ; MAARTJE ADDED
@@ -565,19 +564,21 @@ to update-beliefs
           ifelse item 3 item index_thief belief_thieves = "unknown"[
             set belief_thieves replace-item index_thief belief_thieves ?  ; update belief to chasing
           ][
-            if item 3 item index_thief belief_thieves = "chasing"[ ; if chasing was already happening, only update the cops that are doing this; chasing is the only status that can happen with multiple cops
+            if item 3 item index_thief belief_thieves = "chasing"[ ; if chasing is already happening
               let current_cops item 4 item index_thief belief_thieves
-              let new_cops current_cops
-              if item 0 thief_cop != [-1] and current_cops != [-1] [
-                if not member? item 0 thief_cop current_cops[
-                  set new_cops lput current_cops new_cops
+              ifelse current_cops = [-1][ ; if you had no one in your beliefs, you can update it (note: could be you update it to -1 again)
+                set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" thief_cop)
+              ][ ; if you had someone in your belief, you do not want to forget
+                ifelse thief_cop = [-1][ ; if you got no new ID, you just keep the old one and only update the location
+                  set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" current_cops)
+                ][ ; if the ID is a person, you want to add it to your current personlist
+                  let new_cops current_cops
+                  if not member? item 0 thief_cop new_cops[
+                    set new_cops lput item 0 thief_cop new_cops
+                  ]
+                  set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" new_cops)
                 ]
               ]
-              if new_cops = [][
-                set new_cops [-1]
-              ]
-              let new_belief (list thief_x thief_y thief_ID "chasing" new_cops)
-              set belief_thieves replace-item index_thief belief_thieves new_belief  ; update belief to chasing
             ]
           ]
         ]
@@ -589,8 +590,8 @@ to update-beliefs
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
 
    set seen_thieves [] ; after you updated you beliefs, you reset this for new input
-   print "belief thieves after update"
-   print belief_thieves
+   ;print "belief thieves after update"
+   ;print belief_thieves
 
    ; now you're outside, so obviously no room
    ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
@@ -1032,6 +1033,8 @@ end
 to chase-thief [c]
 
   ; SUUS: gedaan
+
+  ; step 1: decide where to go based on belief and chase the thief
   let my_pos list floor(xcor) floor(ycor)
 
   let index_thief 0
@@ -1043,39 +1046,10 @@ to chase-thief [c]
       set i i - 1
   ]
 
-  let thief_x 0
-  let thief_y 0
-  let thief_ID [-1]
+  let thief_x_belief item 0 item index_thief belief_thieves
+  let thief_y_belief item 1 item index_thief belief_thieves
 
-  let double false
-  let index_double -1
-  let i -1
-  foreach message[
-    set i i + 1
-    if item 2 ? = thief_ID and item 3 ? "chasing"[
-      print "double is true"
-      set double true
-      set index_double i
-    ]
-  ]
-
-  let thief_x item 0 item index_thief belief_thieves
-  let thief_y item 1 item index_thief belief_thieves
-  let thief_ID item 2 item index_thief belief_thieves
-
-  ifelse double = true[
-    set messages replace-item index_double messages (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who))
-  ][
-    set messages lput (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who)) messages
-  ]
-
-  ;if member? (list thief_x thief_y thief_ID "chasing" -1) messages[ ; if you had an earlier message without ID, replace it
-  ;  let index_double_message position (list thief_x thief_y thief_ID "chasing" -1) messages
-  ;  set messages remove-item index_double_message messages
-  ;]
-  ;set messages lput (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who)) messages ; let the others know you are chasing this thief
-
-  let follow_pos list floor(thief_x) floor(thief_y)
+  let follow_pos list floor(thief_x_belief) floor(thief_y_belief)
   new-pos my_pos follow_pos
 
   ask patch-ahead 1 [
@@ -1092,6 +1066,57 @@ to chase-thief [c]
       ]
     ]
   ]
+
+  ; step 2: send message about that you are chasing the thief and where it is
+  let thief_ID [-2]
+  let thief_x 0
+  let thief_y 0
+
+  ask thieves [
+    if distancexy item 0 my_pos item 1 my_pos <= radius-cops + 1[
+      set thief_ID (list who)
+      set thief_x xcor
+      set thief_y ycor
+      set-vision-radii-thieves who
+    ]
+  ]
+  if thief_ID = [-2][
+    set thief_ID item 2 item index_thief belief_thieves
+  ]
+
+  let double false
+  let index_double -1
+  let j -1
+  ; SUUS dit werkt nog niet omdat messages hier nog leeg is? Dus je krijgt 2 messages, 1 met thiefID -1, eentje met thiefID 1
+
+  ifelse messages != [][
+    foreach messages [
+      set j j + 1
+      print "message:"
+      print thief_ID
+      print ?
+      if item 2 ? = thief_ID and item 3 ? = "chasing"[
+        print "double is true"
+        set double true
+        set index_double j
+      ]
+    ]
+
+    ifelse double = true[ ; if you had the chasing item without your ID, replace it with your ID
+      set messages replace-item index_double messages (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who))
+    ][ ; if you did not have a chasing status for this thief yet, add the message to your messages
+      set messages lput (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who)) messages
+    ]
+  ][
+    set messages lput (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who)) messages
+  ]
+
+  ;if member? (list thief_x thief_y thief_ID "chasing" -1) messages[ ; if you had an earlier message without ID, replace it
+  ;  let index_double_message position (list thief_x thief_y thief_ID "chasing" -1) messages
+  ;  set messages remove-item index_double_message messages
+  ;]
+  ;set messages lput (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who)) messages ; let the others know you are chasing this thief
+
 end
 
 to catch-thief [c]
@@ -1804,7 +1829,7 @@ First click on setup, than place items, cops and thieves. Ready? Start the simul
 MONITOR
 7
 309
-208
+252
 354
 Beliefs about seeing thief of cop 1
 [belief_thieves] of cop1
@@ -1813,9 +1838,9 @@ Beliefs about seeing thief of cop 1
 11
 
 MONITOR
-212
+257
 309
-390
+435
 354
 Desire of cop 1
 [desire] of cop1
@@ -1824,9 +1849,9 @@ Desire of cop 1
 11
 
 MONITOR
-394
+439
 309
-568
+613
 354
 Intention of cop 1
 [intention] of cop1
@@ -1837,7 +1862,7 @@ Intention of cop 1
 MONITOR
 8
 359
-209
+252
 404
 Beliefs about seeing thief of cop 2
 [belief_thieves] of cop2
@@ -1846,10 +1871,10 @@ Beliefs about seeing thief of cop 2
 11
 
 MONITOR
-212
-358
-390
-403
+256
+359
+434
+404
 Desire of cop 2
 [desire] of cop2
 17
@@ -1857,9 +1882,9 @@ Desire of cop 2
 11
 
 MONITOR
-394
+439
 358
-568
+613
 403
 Intention of cop 2
 [intention] of cop2
