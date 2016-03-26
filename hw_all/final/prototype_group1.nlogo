@@ -303,15 +303,21 @@ to set-vision-radii-cops [c]
       set cop_room 2
     ]
     [
-      set cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+      if floor(ycor) != -1 [ ; MAARTJE: added because we still get this -1 error sometimes
+        set cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
+      ]
     ]
+
+
+    let my_xcor xcor
+    let my_ycor ycor
+    let dir heading
 
     ;create updated vision radius
     ask patches in-cone radius-cops view [
       let patch_coord list pxcor pycor
       let room_patch table:get room_dict patch_coord
-
-      if room_patch = cop_room and pcolor != black and pcolor != red and pcolor != blue[  ;ROMY: CHANGED
+      if room_patch = cop_room and pcolor != black and pcolor != red and pcolor != blue and ((pycor > my_ycor and (dir > 270 or dir < 90)) or (pycor < my_ycor and (dir < 270 and dir > 90))) [  ;ROMY: CHANGED
         ask cop c [
           set vision_radius lput (patch_coord) vision_radius
         ]
@@ -337,12 +343,18 @@ to set-vision-radii-thieves [t]
     [
       set thief_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
     ]
+
+
+    let my_xcor xcor
+    let my_ycor ycor
+    let dir heading
+
     ;create updated vision radius
     ask patches in-cone radius-thieves view [
       let patch_coord list pxcor pycor
       let room_patch table:get room_dict patch_coord
 
-      if room_patch = thief_room and pcolor != black and pcolor != red and pcolor != blue[ ;ROMY: CHANGED
+      if room_patch = thief_room and pcolor != black and pcolor != red and pcolor != blue and ((pycor > my_ycor and (dir > 270 or dir < 90)) or (pycor < my_ycor and (dir < 270 and dir > 90))) [  ;ROMY: CHANGED
         ask thief t [
           set vision_radius lput (patch_coord) vision_radius
         ]
@@ -416,21 +428,22 @@ to update-beliefs
    ;if seeing cop: store cop with strength and location (for number of ticks)
 
    ;note in which room you are
-   let new_room table:get room_dict list floor(xcor) floor(ycor)
-   if new_room = 0 [
-     set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
-   ]
-   if new_room = 0 [
-     set new_room table:get room_dict list floor(xcor) ceiling(ycor)
-   ]
-   if new_room = 0 [
-     set new_room table:get room_dict list ceiling(xcor) floor(ycor)
-   ]
+   if floor(ycor) != -1 [ ; MAARTJE ADDED
+     let new_room table:get room_dict list floor(xcor) floor(ycor)
+     if new_room = 0 [
+       set new_room table:get room_dict list ceiling(xcor) ceiling(ycor)
+     ]
+     if new_room = 0 [
+       set new_room table:get room_dict list floor(xcor) ceiling(ycor)
+     ]
+     if new_room = 0 [
+       set new_room table:get room_dict list ceiling(xcor) floor(ycor)
+     ]
 
-   if current_room != new_room[
-     set current_room new_room
+     if current_room != new_room[
+       set current_room new_room
+     ]
    ]
-
 
    ; delete item that the thief has already stolen from belief_items and sort the list
    ; (just in case there are more than 1 items in sight, the thief will catch the closest item)
@@ -511,7 +524,9 @@ to update-beliefs
      if item 3 item index_thief belief_thieves = "chasing"[ ; if chasing was already happening, only update the cops that are doing this; chasing is the only status that can happen with multiple cops
        let current_cops item 4 item index_thief belief_thieves
        let new_cops current_cops
-       if item 0 thief_cop != -1 and current_cops != -1 [
+       print "NEW COPS"
+       print new_cops
+       if item 0 thief_cop != [-1] and current_cops != [-1] [
          ;print "thief_cop"
          ;print thief_cop
          ;print current_cops
@@ -700,7 +715,7 @@ to update-intentions-cops
             let thief_x item 0 item index_thief belief_thieves
             let thief_y item 1 item index_thief belief_thieves
 
-            ifelse distancexy thief_x thief_y < 1 [
+            ifelse distancexy thief_x thief_y < 3 [
               set intention (list catch_thief)
             ]
             [ set intention (list chase_thief) ] ; now we don't look around anymore once seen a thief, but change this --> klopt dit wel?
@@ -820,9 +835,9 @@ to knowledge-thieves-update [c]
   set messages []
 end
 
-
 to move-around [i]
-  ifelse ( floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [ ;ROMY ADDED
+  ;ifelse pcolor = red
+  ifelse ( pcolor = red) [ ;ROMY ADDED
      lt 180
      forward 1
      set-vision-radii-cops i
@@ -830,35 +845,38 @@ to move-around [i]
   [
 
   ; to check if turtle reaches a wall
-  ask patch-ahead 1.5 [ ; to make sure that the cop does not reach the wall
-    ifelse pcolor = black [
-      if [breed] of turtle i = cops [
-        ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
-          lt 180
-          forward 1
-          lt random 90
-          set-vision-radii-cops i
+
+    [ask patch-ahead 1 [ ; to make sure that the cop does not reach the wall
+      ifelse pcolor = black [
+        if [breed] of turtle i = cops [
+          ask cop i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
+            lt 180
+            forward 1
+            lt random 90
+            set-vision-radii-cops i
+          ]
         ]
       ]
-    ]
-    [ ifelse not any? customers-on self and [breed] of turtle i = cops [
+      [ ifelse not any? customers-on self and [breed] of turtle i = cops [
         ask cop i [
           forward 1
           set-vision-radii-cops i
         ]
-    ]
-    [ if [breed] of turtle i = cops [
+      ]
+      [ if [breed] of turtle i = cops [
         ask cop i [
           lt 90
           set-vision-radii-cops i
         ]
-       ]
+      ]
+      ]
+      ]
+
     ]
     ]
   ]
-
- ]
 end
+
 
 to clear-vision-radius [a] ; clear vision radius of agent
   ask turtle a[
@@ -877,15 +895,15 @@ end
 
 to move-around-thief [i]
 
- ifelse ( floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [  ; ROMY ADDED
+  ifelse ( pcolor = red) [ ;ROMY ADDED
      lt 180
      forward 1
-     set-vision-radii-thieves i
+     set-vision-radii-cops i
    ]
   [
 
   ; to check if turtle reaches a wall
-  ask patch-ahead 1.5 [  ;1.5 to make sure that the thief does not reach the wall
+  ask patch-ahead 1 [  ;1.5 to make sure that the thief does not reach the wall
     ifelse pcolor = black [
       if [breed] of turtle i = thieves [
         ask thief i [ ; when you reach a wall, turn, forward 1 and make a new random turn --> only this avoid going through a wall
@@ -1009,7 +1027,7 @@ to chase-thief [c]
   new-pos my_pos follow_pos
 
   ask patch-ahead 1 [
-    ifelse not any? customers-on self [
+    ifelse not any? customers-on self and pcolor != black and pcolor != red [
       ask cop c [
         forward 1
         set-vision-radii-cops c
@@ -1031,7 +1049,7 @@ to catch-thief [c]
     let thief_ID -1
 
     ask thieves[
-      if distancexy cop_x cop_y < 3 [
+      if distancexy cop_x cop_y < 4 [
         set thief_ID who
         clear-vision-radius who
         die
@@ -1172,14 +1190,19 @@ end
 ; note: the belief base of the cop needs to be updated by the new position of the thief all the time
 to new-pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
 
-  let my_room_patch table:get room_dict my_pos ; NOTE: sometimes this gives an error
-  let follow_room_patch table:get room_dict follow_pos
+  ifelse item 1 my_pos != -1 [
+    let my_room_patch table:get room_dict my_pos ; NOTE: sometimes this gives an error
+    let follow_room_patch table:get room_dict follow_pos
 
-  if my_room_patch = follow_room_patch [ ; if you're at the same room, you can simply move towards the position
-    let x item 0 follow_pos
-    let y item 1 follow_pos
-    facexy x y
+
+    if my_room_patch = follow_room_patch [ ; if you're at the same room, you can simply move towards the position
+      let x item 0 follow_pos
+      let y item 1 follow_pos
+      facexy x y
+    ]
   ]
+  [ lt 180 ]    ; MAARTJE ADDE]
+
 
   ; else --> check whether you know that where the door is --> move to the door
 end
@@ -1888,7 +1911,7 @@ MONITOR
 1220
 122
 1346
-188
+187
 Number Cops
 number_cops
 17
@@ -1899,7 +1922,7 @@ MONITOR
 1217
 200
 1365
-266
+265
 Number Thieves
 number_thieves
 17
@@ -1910,7 +1933,7 @@ MONITOR
 1219
 282
 1407
-348
+347
 Number Stolen Items
 num_stolen_items
 17
@@ -1921,7 +1944,7 @@ MONITOR
 1219
 367
 1376
-433
+432
 Number in Prison
 num_thieves_in_prison
 17

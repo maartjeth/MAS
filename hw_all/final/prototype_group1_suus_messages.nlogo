@@ -512,6 +512,8 @@ to update-beliefs
          set new_cops [-1]
        ]
        let new_belief (list thief_x thief_y thief_ID "chasing" new_cops)
+       print "NEW Belief"
+       print new_belief
        set belief_thieves replace-item index_thief belief_thieves new_belief  ; update belief to chasing
      ]
      ]
@@ -806,6 +808,8 @@ to knowledge-thieves-update [c]
       ]
     ]
   ]
+  print "seen thieves"
+  print seen_thieves
   set messages []
 end
 
