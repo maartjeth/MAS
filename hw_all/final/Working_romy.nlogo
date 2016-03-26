@@ -230,7 +230,7 @@ to place-cop-manually
       setxy floor(mouse-xcor) floor(mouse-ycor)
       set color black
       set shape "person"
-      set heading 0 ; delete, this is just for debugging
+      set heading 180 ; delete, this is just for debugging
       set view 90
       set seen_thieves []
       set messages []
@@ -324,12 +324,20 @@ to set-vision-radii-cops [c]
       set cop_room table:get room_dict list floor(xcor) floor(ycor) ; floor because you can be on a continuous value
     ]
 
+    let my_xcor xcor
+    let my_ycor ycor
+    let dir heading
+    print dir
+
     ;create updated vision radius
     ask patches in-cone radius-cops view [
       let patch_coord list pxcor pycor
       let room_patch table:get room_dict patch_coord
 
-      if room_patch = cop_room and pcolor != black and pcolor != red and pcolor != blue[  ;ROMY: CHANGED
+      if room_patch = cop_room and pcolor != black and pcolor != red and pcolor != blue and ((pycor > my_ycor and (dir > 270 or dir < 90)) or (pycor < my_ycor and (dir < 270 and dir > 90))) [  ;ROMY: CHANGED
+        ;print "-----"
+        ;print my_ycor + pycor
+        ;print my_ycor
         ask cop c [
           set vision_radius lput (patch_coord) vision_radius
         ]
@@ -749,7 +757,8 @@ end
 
 
 to move-around [i]
-  ifelse ( floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [ ;ROMY ADDED
+  ;ifelse pcolor = red
+  ifelse ( pcolor = red) [ ;ROMY ADDED
      lt 180
      forward 1
      set-vision-radii-cops i
