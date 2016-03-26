@@ -1884,6 +1884,50 @@ Intention of thief 2
 1
 11
 
+MONITOR
+1220
+122
+1346
+188
+Number Cops
+number_cops
+17
+1
+16
+
+MONITOR
+1217
+200
+1365
+266
+Number Thieves
+number_thieves
+17
+1
+16
+
+MONITOR
+1219
+282
+1407
+348
+Number Stolen Items
+num_stolen_items
+17
+1
+16
+
+MONITOR
+1219
+367
+1376
+433
+Number in Prison
+num_thieves_in_prison
+17
+1
+16
+
 @#$#@#$#@
 ## WHAT IS IT?
 
