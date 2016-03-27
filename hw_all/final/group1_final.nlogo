@@ -984,7 +984,7 @@ to chase-thief [c]
       ]
 
       if current_room = 2 or (list floor(xcor) floor(ycor) = coord_1 and from_two = true) or (list floor(xcor) floor(ycor) = coord_3 and from_two = true) or (list floor(xcor) floor(ycor) = coord_4 and from_two = true) or (list floor(xcor) floor(ycor) = coord_5 and from_two = true) or (list floor(xcor) floor(ycor) = coord_6 and from_two = true) or (list floor(xcor) floor(ycor) = coord_7 and from_two = true)[
-        if thief_room != 0 [
+        if thief_room != 0 and thief_room != 2 [
           set route table:get chase_thief_dict list 2 thief_room
           set from_two true
         ]
@@ -1648,7 +1648,7 @@ num_customers
 num_customers
 0
 300
-0
+61
 1
 1
 NIL
