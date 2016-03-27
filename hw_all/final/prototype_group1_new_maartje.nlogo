@@ -564,41 +564,44 @@ to update-beliefs
           if item 3 item index_thief belief_thieves != "prison" and item 3 item index_thief belief_thieves != "escorting"[
             set belief_thieves replace-item index_thief belief_thieves ?  ; update belief to catching
           ]
-        ][; last in ifelse nest --> if thief_status = "chasing"
-          ;ifelse thief_status = chasing
+        ][
 
-          ifelse item 3 item index_thief belief_thieves = "unknown"[
-            if thief_x != item 0 item index_thief belief_thieves and thief_y != item 1 item index_thief belief_thieves[
-              set belief_thieves replace-item index_thief belief_thieves ?  ; update belief to chasing
-            ]
-          ][
-            ifelse thief_status = "chasing"[
 
-            if item 3 item index_thief belief_thieves = "chasing"[ ; if chasing is already happening
-              let current_cops item 4 item index_thief belief_thieves
-              ifelse current_cops = [-1][ ; if you had no one in your beliefs, you can update it (note: could be you update it to -1 again)
-                set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" thief_cop)
-              ][ ; if you had someone in your belief, you do not want to forget
-                ifelse thief_cop = [-1][ ; if you got no new ID, you just keep the old one and only update the location
-                  set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" current_cops)
-                ][ ; if the ID is a person, you want to add it to your current personlist
-                  let new_cops current_cops
-                  if not member? item 0 thief_cop new_cops[
-                    set new_cops lput item 0 thief_cop new_cops
+        ; last in ifelse nest --> if thief_status = "chasing"
+          ifelse thief_status = "chasing"[
+
+            ifelse item 3 item index_thief belief_thieves = "unknown"[
+              if thief_x != item 0 item index_thief belief_thieves and thief_y != item 1 item index_thief belief_thieves[
+                set belief_thieves replace-item index_thief belief_thieves ?  ; update belief to chasing
+              ]
+            ][ ; belief status is chasing
+              if item 3 item index_thief belief_thieves = "chasing"[ ; if chasing is already happening
+                let current_cops item 4 item index_thief belief_thieves
+                ifelse current_cops = [-1][ ; if you had no one in your beliefs, you can update it (note: could be you update it to -1 again)
+                  set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" thief_cop)
+                ][ ; if you had someone in your belief, you do not want to forget
+                  ifelse thief_cop = [-1][ ; if you got no new ID, you just keep the old one and only update the location
+                    set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" current_cops)
+                  ][ ; if the ID is a person, you want to add it to your current personlist
+                    let new_cops current_cops
+                    if not member? item 0 thief_cop new_cops[
+                      set new_cops lput item 0 thief_cop new_cops
+                    ]
+                    set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" new_cops)
                   ]
-                  set belief_thieves replace-item index_thief belief_thieves (list thief_x thief_y thief_ID "chasing" new_cops)
                 ]
               ]
             ]
-            ][; status = unknown
+          ][; status = unknown
               set belief_thieves replace-item index_thief belief_thieves (list 0 0 thief_ID "unknown" [-1])
             ]
+
           ]
         ]
       ]
     ]
   ]
-]
+
    set belief_thieves sort-by [(distancexy item 0 ?1 item 1 ?1 > distancexy item 0 ?2 item 1 ?2)] belief_thieves
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
 
