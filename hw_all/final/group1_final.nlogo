@@ -245,6 +245,7 @@ to place-thief-manually
       set view 90
       set seen_cops []
       set vision_radius []
+      set route_outside []
 
       set-vision-radii-thieves who
       setup-beliefs-thieves who
