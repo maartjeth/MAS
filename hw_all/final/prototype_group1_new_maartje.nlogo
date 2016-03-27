@@ -163,7 +163,7 @@ to setup-cops
     ; desires
     set look_for_thief "look_for_thief"
     set catch_thief "catch_thief"
-    set escort_thief "escort_thief_outside"
+    set escort_thief_outside "escort_thief_outside"
 
     ; intentions
     set move_around "move_around"
@@ -271,6 +271,7 @@ to place-thief-manually
       set shape "person"
 
       set view 90
+      set heading 45
       set seen_cops []
       set vision_radius []
       set seen_doors []
@@ -424,8 +425,8 @@ end
 ; --- Update beliefs ---
 to update-beliefs
  ; You should update your agent's beliefs here.
- let t 0
  ask thieves [
+   let t who
    set belief_seeing_cop seen_cops
    set belief_seeing_cop sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_seeing_cop
 
@@ -455,7 +456,7 @@ to update-beliefs
       let check_items item 0 belief_items
       let check_item_x item 0 check_items
       let check_item_y item 1 check_items
-      ask patch check_item_x check_item_y [
+      ask patches with [pxcor = check_item_x and pycor = check_item_y] [
         if pcolor = white [
           ask turtle t [
             if breed = thieves [
@@ -467,8 +468,6 @@ to update-beliefs
         ]
       ]
     ]
-
-  set t t + 1
  ]
 
 
@@ -491,12 +490,14 @@ to update-beliefs
 
   ; als je hem nog nooit hebt gezien, of thief_ID is -1, index is -1.
   let index_thief -1
-  let i 0
-  foreach belief_thieves[
-    if item 2 ? = thief_ID[
-      set index_thief i
+  if thief_ID != -1[
+    let i 0
+    foreach belief_thieves[
+      if item 2 ? = thief_ID[
+        set index_thief i
+      ]
+      set i i + 1
     ]
-    set i i + 1
   ]
 
   ifelse index_thief = -1 and (thief_status = "chasing" or thief_status = "catching") [ ; MAARTJE added last part
@@ -564,9 +565,15 @@ to update-beliefs
             set belief_thieves replace-item index_thief belief_thieves ?  ; update belief to catching
           ]
         ][; last in ifelse nest --> if thief_status = "chasing"
+          ;ifelse thief_status = chasing
+
           ifelse item 3 item index_thief belief_thieves = "unknown"[
-            set belief_thieves replace-item index_thief belief_thieves ?  ; update belief to chasing
+            if thief_x != item 0 item index_thief belief_thieves and thief_y != item 1 item index_thief belief_thieves[
+              set belief_thieves replace-item index_thief belief_thieves ?  ; update belief to chasing
+            ]
           ][
+            ifelse thief_status = "chasing"[
+
             if item 3 item index_thief belief_thieves = "chasing"[ ; if chasing is already happening
               let current_cops item 4 item index_thief belief_thieves
               ifelse current_cops = [-1][ ; if you had no one in your beliefs, you can update it (note: could be you update it to -1 again)
@@ -583,18 +590,19 @@ to update-beliefs
                 ]
               ]
             ]
+            ][; status = unknown
+              set belief_thieves replace-item index_thief belief_thieves (list 0 0 thief_ID "unknown" [-1])
+            ]
           ]
         ]
       ]
     ]
   ]
 ]
-   set belief_thieves sort-by [(distancexy item 0 ?1 item 1 ?1 < distancexy item 0 ?2 item 1 ?2)] belief_thieves
+   set belief_thieves sort-by [(distancexy item 0 ?1 item 1 ?1 > distancexy item 0 ?2 item 1 ?2)] belief_thieves
    ;NOTE: now it's sorted on distance only, might want to take doors and rooms into account
 
    set seen_thieves [] ; after you updated you beliefs, you reset this for new input
-   ;print "belief thieves after update"
-   ;print belief_thieves
 
    ; now you're outside, so obviously no room
    ifelse (floor(xcor) = -1 or floor(ycor) = -1 or floor(xcor) = max-pxcor or floor(ycor) = max-pycor) [
@@ -626,8 +634,8 @@ to update-desires
   ; If the cop has not seen a thief yet, it should look for it
   ; Else it should try to catch the thief
   ; If the thief is caught, it should be escorted outside
-  ask cops [
 
+  ask cops [
     ; SUUS: gedaan
 
     let seen_thief false
@@ -640,14 +648,11 @@ to update-desires
         set desire escort_thief_outside
 
       ][; if someone saw a thief at one point and you haven't caught one now, go check each thief in beliefs
-        ; to be able to break out of a for-each loop, it has to be in a seperate prodecure in netlogo
 
         foreach belief_thieves[
-          if length ? > 3 [ ; if thief has a status
-            if item 3 ? = "chasing" or item 3 ? = "catching" [ ;if there is a thief to chase and catch
+          if item 3 ? = "chasing" or item 3 ? = "catching" [ ;if there is a thief to chase and catch
               set desire catch_thief
               set seen_thief true
-            ]
           ]
         ]
         if seen_thief = false[
@@ -656,6 +661,7 @@ to update-desires
       ]
     ]
   ]
+
 
   ask thieves [
     ;if the thief has an item it will want to flee with it, else it will want to steal something
@@ -738,12 +744,10 @@ to update-intentions-cops
           [ ; SUUS: gedaan
 
             let index_thief 0
-            let i length belief_thieves - 1
             foreach belief_thieves[
               if item 3 ? = "chasing"[
-                set index_thief i
+                set index_thief position ? belief_thieves
               ]
-              set i i - 1
             ]
 
             let thief_x item 0 item index_thief belief_thieves
@@ -867,8 +871,8 @@ to knowledge-thieves-update [c]
       ]
     ]
   ]
-  print "messages"
-  print messages
+  ;print "messages"
+  ;print messages
   set messages []
 end
 
@@ -1040,17 +1044,27 @@ to chase-thief [c]
   ; step 1: decide where to go based on belief and chase the thief
   let my_pos list floor(xcor) floor(ycor)
 
+  ; assumption, if code is right you only get here if there is a thief to chase
   let index_thief 0
-  let i length belief_thieves - 1
+  print belief_thieves
   foreach belief_thieves[
     if item 3 ? = "chasing"[
-      set index_thief i
+      print ?
+      set index_thief position ? belief_thieves
+      print item index_thief belief_thieves
     ]
-      set i i - 1
   ]
 
+  print "deze dief ga ik chasen"
+  print item index_thief belief_thieves
   let thief_x_belief item 0 item index_thief belief_thieves
   let thief_y_belief item 1 item index_thief belief_thieves
+  let thief_ID_belief item 2 item index_thief belief_thieves
+
+  let my_location (list xcor ycor)
+  let thief_location (list thief_x_belief thief_y_belief)
+
+
 
   ; if that position is in your current room --> then just follow, otherwise go to that room
   let thief_room table:get room_dict list thief_x_belief thief_y_belief
@@ -1095,24 +1109,31 @@ to chase-thief [c]
       ]
 
 
-
     ; getting your new position
     ifelse route != [] [
-      ifelse list floor(xcor) floor(ycor) != item 0 route and pcolor != blue [
+      ifelse list floor(xcor) floor(ycor) != item 0 route and pcolor != blue [ ; in verkeerde kamer en niet op patch voor deur
+        print "you are in the room"
         let follow_pos item 0 route
-        new-pos my_pos follow_pos
+        facexy item 0 follow_pos item 1 follow_pos
+        ;new-pos my_pos follow_pos
       ]
-      [ ifelse pcolor = blue [
+      [ ; you are trying to leave the wrong room
+        ifelse pcolor = blue [ ; you are in the door (and not in the room)
+        print "you are in the door"
         let follow_pos item 2 route
-        new-pos my_pos follow_pos
+        facexy item 0 follow_pos item 1 follow_pos
+        ;new-pos my_pos follow_pos
       ]
-      [let follow_pos item 1 route
-        new-pos my_pos follow_pos ]
+      [ ; you are not in the door (and not in the room)
+        print "you are not in the door"
+        let follow_pos item 1 route
+        facexy item 0 follow_pos item 1 follow_pos]
+        ;new-pos my_pos follow_pos ]
       ]
     ]
-    [ print "HELLLOOO"
-      lt 50
-      forward 1; cheating
+    [ print "HELLOOO"
+      ;lt 50
+      ;forward 1; cheating, because route should not be empty
       ]
 
 
@@ -1127,6 +1148,7 @@ to chase-thief [c]
         ]
       ]
       [ ask cop c [
+        print "turn 90 degrees"
         lt 90
         forward 1
         set-vision-radii-cops c
@@ -1149,21 +1171,18 @@ to chase-thief [c]
   ]
   if thief_ID = [-2][
     set thief_ID item 2 item index_thief belief_thieves
+    set thief_x item 0 item index_thief belief_thieves
+    set thief_y item 1 item index_thief belief_thieves
   ]
 
   let double false
   let index_double -1
   let j -1
-  ; SUUS dit werkt nog niet omdat messages hier nog leeg is? Dus je krijgt 2 messages, 1 met thiefID -1, eentje met thiefID 1
 
   ifelse messages != [][
     foreach messages [
       set j j + 1
-      print "message:"
-      print thief_ID
-      print ?
       if item 2 ? = thief_ID and item 3 ? = "chasing"[
-        print "double is true"
         set double true
         set index_double j
       ]
@@ -1178,12 +1197,6 @@ to chase-thief [c]
     set messages lput (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who)) messages
   ]
 
-  ;if member? (list thief_x thief_y thief_ID "chasing" -1) messages[ ; if you had an earlier message without ID, replace it
-  ;  let index_double_message position (list thief_x thief_y thief_ID "chasing" -1) messages
-  ;  set messages remove-item index_double_message messages
-  ;]
-  ;set messages lput (list floor(thief_x) floor(thief_y) thief_ID "chasing" (list who)) messages ; let the others know you are chasing this thief
-
 end
 
 to catch-thief [c]
@@ -1193,24 +1206,50 @@ to catch-thief [c]
     let thief_ID [-1]
 
     ask thieves[
-      if distancexy cop_x cop_y < 3 [
-        set thief_ID (list who)
+     if distancexy cop_x cop_y < 4 [
+       set thief_ID (list who)
+     ]
+    ]
+
+    if thief_ID != [-1][
+      ask thief item 0 thief_ID[
         clear-vision-radius who
         die
       ]
     ]
-    if thief_ID != -1[
+
+    ifelse thief_ID != [-1][
+      set caught_thief true
       set messages lput (list floor(cop_x) floor(cop_y) thief_ID "catching" (list who)) messages
+    ][; if thief ID is -1, there is no thief around: so check if your information is still valid
+      ; ophalen gegeven uit beliefs
+      print "there is no thief here"
+      let i 0
+      foreach belief_thieves[
+        let me_chasing false
+        print "foreach"
+        print item 4 ?
+        foreach item 4 ?[
+          print ?
+          if ? = who[
+            set me_chasing true]
+        ]
+        if item 3 ? = "chasing" and me_chasing = true and distancexy item 0 ? item 1 ? < radius-cops[
+          print "ik ben dicht bij mn oude belief van chasing"
+          if not any? thieves-on neighbors[
+            print "set status to unknown"
+            print item i belief_thieves
+            set belief_thieves replace-item i belief_thieves (list item 0 ? item 1 ? item 2 ? "unknown" [-1])
+            print belief_thieves
+            set messages lput (list item 0 ? item 1 ? item 2 ? "unknown" [-1]) messages
+          ]
+        ]
+        set i i + 1
+      ]
     ]
   ]
 
-  ask cops [
-    set caught_thief false ; for all cops, they have not caught the thief, and do not have to escort them, so they can continue searching for other thiefs
-  ]
 
-  ask cop c [
-    set caught_thief true
-  ]
 
 end
 
@@ -1333,7 +1372,7 @@ end
 ; note: the belief base of the cop needs to be updated by the new position of the thief all the time
 to new-pos [my_pos follow_pos] ; function gets the position to be followed and the position of the
 
-  ifelse item 1 my_pos != -1 [
+  if item 1 my_pos != -1 [
     let my_room_patch table:get room_dict my_pos ; NOTE: sometimes this gives an error
     let follow_room_patch table:get room_dict follow_pos
 
@@ -1344,7 +1383,7 @@ to new-pos [my_pos follow_pos] ; function gets the position to be followed and t
       facexy x y
     ]
   ]
-  [ lt 180 ]    ; MAARTJE ADDE]
+  ;[ lt 180 ]    ; MAARTJE ADDED, cheat because you should not be at coordinate -1, so turn]
 
 
   ; else --> check whether you know that where the door is --> move to the door
@@ -2144,9 +2183,9 @@ number_thieves
 MONITOR
 1219
 282
-1407
+1461
 347
-Number Stolen Items
+Number Escaped with Items
 num_stolen_items
 17
 1
@@ -2159,17 +2198,6 @@ MONITOR
 432
 Number in Prison
 num_thieves_in_prison
-17
-1
-16
-
-MONITOR
-1220
-451
-1370
-516
-Number Escaped
-num_escaped
 17
 1
 16
